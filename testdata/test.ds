@@ -9,5 +9,9 @@ fun foo(ref x : int) {
 }
 
 fun bar() : int {
+	var x = {1,2,3};
+	var s = "a string";
+	var y, z = 1, 2;
+	if var y = 0; y < 0 {}
 	return 0;
 }

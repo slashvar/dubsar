@@ -1,0 +1,22 @@
+fun partition(ref array, left, right) {
+	var pivot = left + (right - left) / 2;
+	var pval = array[pivot];
+	array[right-1], array[pivot] = array[pivot], array[right-1];
+	pivot = left;
+	for var i = left; i < right - 1; ++i {
+		if array[i] < pval {
+			array[i], array[pivot] = array[pivot], array[i];
+			++pivot;
+		}
+	}
+	array[right-1], array[pivot] = array[pivot], array[right-1];
+	return pivot;
+}
+
+fun sort(ref array, left, right) {
+	if array.size() > 1 {
+		var pivot = partition(array, left, right);
+		sort(array, left, pivot);
+		sort(array, pivot+1, right);
+	}
+}
