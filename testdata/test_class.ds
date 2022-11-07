@@ -3,6 +3,21 @@ class foo
 class bar {}
 
 class foobar {
+	delete {
+		x = -1;
+	}
 	var x = 0;
-	fun getX() { return x; }
+	fun getX() {
+		return x;
+	}
+}
+
+class <T> Box(v : T) {
+	var x : T = v;
+	fun get() {
+		return x;
+	}
+	fun set(v) {
+		x = v;
+	}
 }

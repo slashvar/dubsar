@@ -7,8 +7,11 @@ const auto grammar = R"(
     GLOBAL_DECL <- (FUN / CLASS)*
 
     # Class declaration Grammar
-    CLASS       <- 'class' IDENT CLASS_BLOCK?
-    CLASS_BLOCK <- '{' (DECL / FUN)* '}'
+    CLASS       <- 'class' (TYPE_PARAMS)? IDENT INIT_PARAMS? CLASS_BLOCK?
+    TYPE_PARAMS <- '<' IDENT (',' IDENT)* '>'
+    INIT_PARAMS <- '(' PARAM_LIST ')'
+    CLASS_BLOCK <- '{' DELETE? (DECL / FUN)* '}'
+    DELETE      <- 'delete' BLOCK
 
     # Function Grammar
     FUN         <- 'fun' IDENT '(' PARAM_LIST? ')' (':' IDENT)? BLOCK
@@ -21,32 +24,39 @@ const auto grammar = R"(
 
     # Statement Grammar
     STATEMENT   <- DECL / IF / LOOP / EXPR_STM / RETURN
-    DECL        <- 'var' IDENT ( ':' IDENT)? ('=' EXPRESSION)? ';'
-    IF          <- 'if' EXPRESSION BLOCK ELSE?
+    DECL        <- DECL_TYPE DECL_LIST ('=' EXPRESSION)? ';'
+    DECL_ID     <- IDENT (':' IDENT)?
+    DECL_LIST   <- DECL_ID (',' DECL_ID)*
+    DECL_TYPE   <- 'var' / 'ref'
+    IF          <- 'if' (DECL / (EXPRESSION ';'))? EXPRESSION BLOCK ELSE?
     ELSE        <- 'else' BLOCK
     LOOP        <- 'for' (((DECL / (EXPRESSION ';')) EXPRESSION ';' EXPRESSION) / EXPRESSION) BLOCK
     EXPR_STM    <- EXPRESSION ';'
     RETURN      <- 'return' EXPRESSION? ';'
 
 	# Expression Grammar
-	EXPRESSION  <- LEFT_OP (OPERATOR LEFT_OP)* {
+    EXPRESSION  <- COMMA_EXPR (',' COMMA_EXPR)*
+    COMMA_EXPR  <- VALUE_EXPR / '{' EXPRLIST? '}'
+    VALUE_EXPR  <- LEFT_OP (OPERATOR LEFT_OP)* {
                          precedence
                            L = += -= *= /=
                            L < > == <= >=
-                           L - + or
-                           L / * and
+                           L - + | or
+                           L / * % & ^ and
                        }
-    LEFT_OP     <- L_OPERATOR? CALL
-    L_OPERATOR  <- '*' / '++' / '--' / '+' / '-' / 'not'
-	CALL		<- ARRAY CALL_OP?
+    LEFT_OP     <- L_OPERATOR? RIGHT_OP
+    L_OPERATOR  <- '*' / '++' / '--' / '+' / '-' / '~' / 'not'
+    RIGHT_OP    <- ATOM R_OPERATOR*
+    R_OPERATOR  <- ARRAY_OP / CALL_OP / FIELD_OP
+    FIELD_OP    <- '.' IDENT
 	CALL_OP		<- '(' EXPRLIST? ')'
-	ARRAY		<- ATOM ARRAY_OP?
 	ARRAY_OP	<- '[' EXPRLIST ']'
-    ATOM        <- IDENT / NUMBER / '(' EXPRESSION ')'
+    ATOM        <- IDENT / NUMBER / '(' EXPRESSION ')' / STR
 	EXPRLIST	<- EXPRESSION (',' EXPRESSION)*
-    OPERATOR    <- 'and' / 'or' / '<' / '>' / '==' / '<=' / '>=' / '=' / '+=' / '-=' / '*=' / '/=' / '+' / '-' / '*' / '/'
+    OPERATOR    <- 'and' / 'or' / '<' / '>' / '==' / '<=' / '>=' / '=' / '+=' / '-=' / '*=' / '/=' / '+' / '-' / '*' / '/' / '%' / '&' / '|' / '^'
     NUMBER      <- < '-'? [0-9]+ >
 	IDENT		<- < [a-zA-Z][a-zA-Z0-9]* >
+    STR         <- '"' < [^"]* > '"'
     %whitespace <- [ \t\r\n]*
 )";
 
@@ -93,6 +103,9 @@ auto main(int, char** argv) -> int
 {
     peg::parser parser(grammar);
     parser.enable_ast();
+    parser.set_logger([](size_t line, size_t col, const std::string& msg) {
+        std::clog << "Syntax error line " << line << " col " << col << ": " << msg << std::endl;
+    });
 
     auto                      expr = argv[1];
     std::shared_ptr<peg::Ast> ast;
