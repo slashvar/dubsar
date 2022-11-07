@@ -1,4 +1,4 @@
-# Dubsar language #
+#  𒁾𒊬  Dubsar language #
 
 **Warning: this is really early stage**
 
