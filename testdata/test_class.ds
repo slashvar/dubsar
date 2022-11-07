@@ -1,0 +1,8 @@
+class foo
+
+class bar {}
+
+class foobar {
+	var x = 0;
+	fun getX() { return x; }
+}
