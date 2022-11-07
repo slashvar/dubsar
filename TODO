@@ -1,0 +1,18 @@
+## General ##
+- [] Read from file
+- [] Set-up program options
+
+## Syntax ##
+- [] Add comments
+- [] Add a form of switch
+- [] Add support for exceptions
+- [] Refactor and clean grammar
+
+## AST ##
+- [] Define specific AST
+- [] Produce real AST
+	- Either using cpp-peglib AST
+	- Or using semantic rules
+
+## Typing ##
+- [] Start defining types system
