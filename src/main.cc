@@ -4,7 +4,11 @@
 
 const auto grammar = R"(
     # Global declaration Grammar
-    GLOBAL_DECL <- FUN*
+    GLOBAL_DECL <- (FUN / CLASS)*
+
+    # Class declaration Grammar
+    CLASS       <- 'class' IDENT CLASS_BLOCK?
+    CLASS_BLOCK <- '{' (DECL / FUN)* '}'
 
     # Function Grammar
     FUN         <- 'fun' IDENT '(' PARAM_LIST? ')' (':' IDENT)? BLOCK
@@ -16,19 +20,18 @@ const auto grammar = R"(
     BLOCK       <- '{' STATEMENT* '}'
 
     # Statement Grammar
-    STATEMENT   <- DECL / ASSIGN / IF / LOOP / EXPR_STM / RETURN
-    DECL        <- 'var' IDENT '=' EXPRESSION ';'
-    ASSIGN      <- EXPRESSION OP_ASSIGN EXPRESSION ';'
-    OP_ASSIGN   <- '=' / '+=' / '-=' / '*=' / '/='
+    STATEMENT   <- DECL / IF / LOOP / EXPR_STM / RETURN
+    DECL        <- 'var' IDENT ( ':' IDENT)? ('=' EXPRESSION)? ';'
     IF          <- 'if' EXPRESSION BLOCK ELSE?
     ELSE        <- 'else' BLOCK
-    LOOP        <- 'for' (((DECL / ASSIGN) EXPRESSION ';' EXPRESSION) / EXPRESSION) BLOCK
+    LOOP        <- 'for' (((DECL / (EXPRESSION ';')) EXPRESSION ';' EXPRESSION) / EXPRESSION) BLOCK
     EXPR_STM    <- EXPRESSION ';'
     RETURN      <- 'return' EXPRESSION? ';'
 
 	# Expression Grammar
 	EXPRESSION  <- LEFT_OP (OPERATOR LEFT_OP)* {
                          precedence
+                           L = += -= *= /=
                            L < > == <= >=
                            L - + or
                            L / * and
@@ -41,7 +44,7 @@ const auto grammar = R"(
 	ARRAY_OP	<- '[' EXPRLIST ']'
     ATOM        <- IDENT / NUMBER / '(' EXPRESSION ')'
 	EXPRLIST	<- EXPRESSION (',' EXPRESSION)*
-    OPERATOR    <- 'and' / 'or' / '+' / '-' / '*' / '/' / '<' / '>' / '==' / '<=' / '>='
+    OPERATOR    <- 'and' / 'or' / '<' / '>' / '==' / '<=' / '>=' / '=' / '+=' / '-=' / '*=' / '/=' / '+' / '-' / '*' / '/'
     NUMBER      <- < '-'? [0-9]+ >
 	IDENT		<- < [a-zA-Z][a-zA-Z0-9]* >
     %whitespace <- [ \t\r\n]*
