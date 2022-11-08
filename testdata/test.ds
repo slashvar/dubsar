@@ -1,4 +1,6 @@
+/* comments  */
 fun foo(ref x : int) {
+	ref y = x;
 	x = 3;
 	if x == 3 {
 		x = 4;
@@ -9,9 +11,25 @@ fun foo(ref x : int) {
 }
 
 fun bar() : int {
+	/* comments */
+	var foo_bar = 0;
+	var _ = {};
 	var x = {1,2,3};
 	var s = "a string";
 	var y, z = 1, 2;
+	/* comments */
+	var c : integer<8> = 0;
+	var s : integer<16> = 0;
+	var i : integer<32> = 0;
+	var l : integer<64> = 0;
+	var f : float = 0;
+	var d : double = 0;
 	if var y = 0; y < 0 {}
+	(x : int);
 	return 0;
 }
+/*
+	/*
+		Nested comments allowed
+	*/
+*/

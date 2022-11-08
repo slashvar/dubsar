@@ -4,28 +4,33 @@
 
 const auto grammar = R"(
     # Global declaration Grammar
-    GLOBAL_DECL <- (FUN / CLASS)*
+    GLOBAL_DECL <- (_ / FUN / CLASS)*
+
+    # Type grammar
+    TYPENAME    <- FLOAT / INTEGER / IDENT
+    FLOAT       <- 'float' | 'double'
+    INTEGER     <- 'integer<' ('8' | '16' | '32' | '64') '>'
 
     # Class declaration Grammar
     CLASS       <- 'class' (TYPE_PARAMS)? IDENT INIT_PARAMS? CLASS_BLOCK?
     TYPE_PARAMS <- '<' IDENT (',' IDENT)* '>'
     INIT_PARAMS <- '(' PARAM_LIST ')'
-    CLASS_BLOCK <- '{' DELETE? (DECL / FUN)* '}'
+    CLASS_BLOCK <- '{' _* DELETE? _* (_ / DECL / FUN)* '}'
     DELETE      <- 'delete' BLOCK
 
     # Function Grammar
-    FUN         <- 'fun' IDENT '(' PARAM_LIST? ')' (':' IDENT)? BLOCK
+    FUN         <- 'fun' IDENT '(' PARAM_LIST? ')' (':' TYPENAME)? BLOCK
     PARAM_ATTR  <- 'ref' / 'const'
-    PARAM       <- PARAM_ATTR* IDENT (':' IDENT)?
+    PARAM       <- PARAM_ATTR* IDENT (':' TYPENAME)?
     PARAM_LIST  <- PARAM (',' PARAM_LIST)*
 
     # Block Grammar
     BLOCK       <- '{' STATEMENT* '}'
 
     # Statement Grammar
-    STATEMENT   <- DECL / IF / LOOP / EXPR_STM / RETURN
+    STATEMENT   <- _ / DECL / IF / LOOP / EXPR_STM / RETURN
     DECL        <- DECL_TYPE DECL_LIST ('=' EXPRESSION)? ';'
-    DECL_ID     <- IDENT (':' IDENT)?
+    DECL_ID     <- IDENT (':' TYPENAME)?
     DECL_LIST   <- DECL_ID (',' DECL_ID)*
     DECL_TYPE   <- 'var' / 'ref'
     IF          <- 'if' (DECL / (EXPRESSION ';'))? EXPRESSION BLOCK ELSE?
@@ -51,13 +56,21 @@ const auto grammar = R"(
     FIELD_OP    <- '.' IDENT
 	CALL_OP		<- '(' EXPRLIST? ')'
 	ARRAY_OP	<- '[' EXPRLIST ']'
-    ATOM        <- IDENT / NUMBER / '(' EXPRESSION ')' / STR
+    ATOM        <- CAST / IDENT / NUMBER / '(' EXPRESSION ')' / STR
+    CAST        <- '(' EXPRESSION ':' TYPENAME ')'
 	EXPRLIST	<- EXPRESSION (',' EXPRESSION)*
     OPERATOR    <- 'and' / 'or' / '<' / '>' / '==' / '<=' / '>=' / '=' / '+=' / '-=' / '*=' / '/=' / '+' / '-' / '*' / '/' / '%' / '&' / '|' / '^'
     NUMBER      <- < '-'? [0-9]+ >
-	IDENT		<- < [a-zA-Z][a-zA-Z0-9]* >
-    STR         <- '"' < [^"]* > '"'
+	IDENT		<- < [a-zA-Z_][a-zA-Z0-9_]* >
+    STR         <- '"' (!'"' .)* '"'
+
+    ~_          <- COMMS
     %whitespace <- [ \t\r\n]*
+    CBEGIN      <- '/*'
+    CEND        <- '*/'
+    COMMS       <- CBEGIN COMMS_INT* CEND
+    COMMS_INT   <- COMMS / (!CBEGIN !CEND ANY)
+    ANY         <- .
 )";
 
 void pp(const peg::Ast& ast)
