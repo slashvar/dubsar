@@ -3,13 +3,17 @@ class foo
 class bar {}
 
 class foobar {
+	/* dtor */
 	delete {
 		x = -1;
 	}
+	/* the rest */
 	var x = 0;
+	/* just */
 	fun getX() {
 		return x;
 	}
+	/* end */
 }
 
 class <T> Box(v : T) {
