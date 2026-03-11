@@ -32,11 +32,11 @@ The pipeline is: `.dub` source file → **Lexer** → **Parser** → **AST** →
 
 ### Source files (`src/`)
 
-- `lexer.l` — Flex lexer. Keywords: `fun`, `var`, `ref`, `return`, `for`, `type`, `struct`, `string`, `interface`, `if`, `else`, `continue`. Operators include arithmetic, comparison, logical, pre/post increment/decrement, compound assignment (`+=`, `-=`, `*=`, `/=`), `::`, `->`, and indexing `[]`. Supports `//` and `/* */` comments.
-- `parser.y` — Bison grammar. Produces a `ProgramNode*` in the global `root` variable. Handles: function/method/type declarations at top level, `var` declarations, `for`/for-range loops, `if`/`else`, `return`, `continue`, compound statements, tuple declarations/assignments, and expressions.
+- `lexer.l` — Flex lexer. Keywords: `fun`, `var`, `ref`, `return`, `for`, `type`, `struct`, `string`, `interface`, `if`, `else`, `continue`. Operators include arithmetic (including `%`), comparison, logical, pre/post increment/decrement, compound assignment (`+=`, `-=`, `*=`, `/=`), `::`, `->`, and indexing `[]`. Supports `//` and `/* */` comments.
+- `parser.y` — Bison grammar. Produces a `ProgramNode*` in the global `root` variable. Handles: function/method/type declarations at top level, `var` declarations, `for`/for-range loops, `if`/`else`, `return`, `continue`, compound statements, tuple declarations/assignments, and expressions. **Note:** `MethodDeclNode` does not store parameters — they are parsed for syntax checking and then deleted. The build uses `-Wextra -Werror`; generated Flex/Bison sources are compiled without `-Werror` to suppress unavoidable warnings.
 - `ast.h` / `ast.cpp` — AST node class hierarchy. `ProgramNode` is the root. All nodes implement `accept(Visitor&)` for the visitor pattern. `ast.cpp` defines the global `root` variable.
 - `visitor.h` — Abstract `Visitor` base class with `visit()` overloads for every node type.
-- `printer.h` / `printer.cpp` — `Printer` concrete visitor for AST pretty-printing. Adds parentheses around binary ops for round-trip stability.
+- `printer.h` / `printer.cpp` — `Printer` concrete visitor for AST pretty-printing. Adds parentheses around all binary ops for round-trip stability (avoids any precedence ambiguity on re-parse).
 - `parser_types.h` — Forward declarations and manually-maintained token `#define`s that must match Bison's generated output. **Important:** when modifying `parser.y` tokens, this file must be kept in sync.
 - `main.cpp` — Entry point: opens a file, calls `yyparse()`, then calls `Printer` on the AST root.
 
@@ -76,11 +76,12 @@ ASTNode
 - **Type declarations**: structs (`type point = struct { x: int; y: int; }`), inheritance (`struct : ParentType`), interfaces (`type reader = interface { read(sz: int) -> vector<byte>; }`)
 - **Methods**: `fun TypeName::methodName() -> ReturnType { ... }`, called as `obj.method(args)`
 - **Qualified calls**: `ns::func(args)`
-- **C-style for loop**: `for var i = 0; i < n; ++i { ... }` (no parens, no semicolon before body)
+- **C-style for loop**: `for var i = 0; i < n; ++i { ... }` (no parens, no semicolon before body). Only the `for var name = init; cond; incr` form is implemented; the three-expression form (`for expr; expr; expr`) exists in the grammar but is not implemented (returns nullptr).
 - **Range-based for**: `for var item = range(collection) { ... }`
 - **If/else**: `if cond { ... }` / `if cond { ... } else { ... }`
 - **Continue**: `continue;`
-- **Operators**: arithmetic, comparison, logical (`&&`, `||`, `!`), compound assignment (`+=` `-=` `*=` `/=`), pre/post `++`/`--`, indexing `[]`
+- **Generic types**: `vector<int>`, `vector<byte>`, etc. are supported in type positions (parameters, return types, variable declarations)
+- **Operators**: arithmetic (including `%`), comparison, logical (`&&`, `||`, `!`), compound assignment (`+=` `-=` `*=` `/=`), pre/post `++`/`--`, indexing `[]`
 - **Tuples**: returned as `return a, b;`, destructured as `var x, y = f();`
 
 ### Test Infrastructure

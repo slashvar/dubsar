@@ -7,12 +7,21 @@ Currently implements lexing, parsing, AST construction, and pretty-printing.
 
 - Functions with inferred or explicit type annotations
 - `ref` parameters (pass-by-reference)
+- `var` declarations with optional type annotations (`var x = 10;`, `var x: int = 10;`)
+- Tuple variables and assignments (`var x, y = f();`, `return a, b;`)
+- Init-list expressions (`var v: vector<int> = {};`)
 - `type` declarations for structs with optional single inheritance
 - `type` declarations for interfaces with method signatures
 - Methods declared as `fun TypeName::methodName()`
 - Member calls (`obj.method(args)`) and qualified calls (`ns::func(args)`)
 - Generic types (`vector<byte>`)
-- `for` loops: `for var i = 0; i < n; ++i { ... }`
+- C-style `for` loops: `for var i = 0; i < n; ++i { ... }`
+- Range-based `for` loops: `for var item = range(collection) { ... }`
+- `if`/`else` statements
+- `continue`
+- Arithmetic, comparison, and logical operators (`&&`, `||`, `!`)
+- Compound assignment operators (`+=`, `-=`, `*=`, `/=`)
+- Pre/post increment/decrement (`++`/`--`)
 - String literals and the built-in `string` type
 
 See `examples/` for sample source files.
