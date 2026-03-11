@@ -1,0 +1,19 @@
+// For loop with typed induction variable and typed accumulator.
+fun sum(n : int) -> int {
+    var result : int = 0;
+    for var i = 1; i <= n; ++i {
+        result = result + i;
+    }
+    return result;
+}
+
+// Nested for loops.
+fun matrix_trace(n : int) -> int {
+    var total : int = 0;
+    for var i = 1; i <= n; ++i {
+        for var j = 1; j <= n; ++j {
+            total = total + 1;
+        }
+    }
+    return total;
+}

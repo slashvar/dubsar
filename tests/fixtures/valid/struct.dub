@@ -1,0 +1,16 @@
+// Basic struct declarations.
+type point2d = struct {
+    x: int;
+    y: int;
+}
+
+type point3d = struct {
+    x: int;
+    y: int;
+    z: int;
+}
+
+type named = struct {
+    label: string;
+    value: int;
+}

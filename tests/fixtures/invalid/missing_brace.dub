@@ -1,0 +1,3 @@
+// Missing closing brace on function body.
+fun bad(n) {
+    var x = 1;

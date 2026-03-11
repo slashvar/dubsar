@@ -1,0 +1,5 @@
+// var declaration missing its semicolon.
+fun bad() {
+    var x = 1
+    return x;
+}

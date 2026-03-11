@@ -1,0 +1,15 @@
+// Struct fields of type string.
+type person = struct {
+    name: string;
+    age: int;
+}
+
+// Method returning a string type.
+fun person::greeting() -> string {
+    return name;
+}
+
+// Function with a string ref parameter.
+fun set_label(label : ref string) {
+    label = label;
+}

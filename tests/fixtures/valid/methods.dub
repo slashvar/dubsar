@@ -1,0 +1,20 @@
+type vec2 = struct {
+    x: int;
+    y: int;
+}
+
+// Method with inferred return type.
+fun vec2::dot() {
+    return x * x + y * y;
+}
+
+// Method with explicit return type.
+fun vec2::norm() -> int {
+    return x * x + y * y;
+}
+
+// Method that mutates fields via assignment.
+fun vec2::scale() {
+    x = x * 2;
+    y = y * 2;
+}

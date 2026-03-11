@@ -1,0 +1,33 @@
+// Arithmetic operators.
+fun arithmetic(a : int, b : int) -> int {
+    var s = a + b;
+    var d = a - b;
+    var p = a * b;
+    var q = a / b;
+    return s + d + p + q;
+}
+
+// Comparison operators.
+fun comparisons(a : int, b : int) {
+    var lt = a < b;
+    var gt = a > b;
+    var le = a <= b;
+    var ge = a >= b;
+    var eq = a == b;
+    var ne = a != b;
+    return lt;
+}
+
+// Prefix increment and decrement.
+fun pre_ops(n) {
+    ++n;
+    --n;
+    return n;
+}
+
+// Logical operators.
+fun logical(a, b) {
+    var r = a && b;
+    r = a || b;
+    return r;
+}

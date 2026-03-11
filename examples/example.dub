@@ -1,0 +1,49 @@
+/*
+ * Sample of dubsar language (WiP)
+ */
+
+// Function, types fully inferred.
+fun factorial(n) {
+    var r = 1;
+    for var i = 1; i <= n; ++i {
+        r = r * i;
+    }
+    return r;
+}
+
+// Function with explicit reference parameters but inferred types.
+fun swap(a : ref, b : ref) {
+    var c = a;
+    a = b;
+    b = c;
+}
+
+// Function with all explicit types.
+fun factorial_count(n : int, count : ref int) -> int {
+    var r : int = 1;
+    count = 0;
+    for var i = 1; i <= n; ++i {
+        r = r * i;
+        ++count;
+    }
+    return r;
+}
+
+// Type declaration a standard struct.
+type point = struct {
+    x: int;
+    y: int;
+}
+
+// Method of type point.
+fun point::module2() {
+    return x*x + y*y;
+}
+
+type colored_point = struct : point {
+    color: string;
+}
+
+fun colored_point::to_string() {
+    return color;
+}

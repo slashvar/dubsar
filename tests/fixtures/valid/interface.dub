@@ -1,0 +1,21 @@
+type stringer = interface {
+    string() -> string;
+}
+
+fun print_obj(x : stringer) {
+    var s = x.string();
+    sys::print(s);
+}
+
+type reader = interface {
+    read(sz : int) -> vector<byte>;
+}
+
+fun read_obj(x, sz : int) -> vector<byte> {
+    return x.read(sz);
+}
+
+type foobar = interface {
+    foo(x : int) -> int;
+    bar(x : int) -> int;
+}

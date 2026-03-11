@@ -1,0 +1,4 @@
+// @ is not a valid token in dubsar.
+fun bad() {
+    @ = 1;
+}

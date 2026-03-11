@@ -1,0 +1,14 @@
+// Function with explicit parameter and return types.
+fun add(a : int, b : int) -> int {
+    return a + b;
+}
+
+// Mixed: typed params, inferred return.
+fun mul(a : int, b : int) {
+    return a * b;
+}
+
+// Typed ref parameter.
+fun increment(n : ref int) {
+    n = n + 1;
+}

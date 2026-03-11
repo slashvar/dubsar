@@ -1,0 +1,21 @@
+// Single-level inheritance.
+type shape = struct {
+    color: string;
+}
+
+type circle = struct : shape {
+    radius: int;
+}
+
+// Multi-level inheritance chain.
+type animal = struct {
+    age: int;
+}
+
+type mammal = struct : animal {
+    legs: int;
+}
+
+type dog = struct : mammal {
+    name: string;
+}

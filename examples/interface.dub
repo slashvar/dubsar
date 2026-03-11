@@ -1,0 +1,28 @@
+/*
+ * Interface examples
+ */
+
+type stringer = interface {
+	string() -> string;
+}
+
+// Using interface with explicit typing.
+fun print_obj(x : stringer) {
+	var s = x.string();
+	sys::print(s);
+}
+
+type reader = interface {
+	read(sz : int) -> vector<byte>;
+}
+
+// Inferring interface.
+fun read_obj(x, sz:int) -> vector<byte> {
+	return x.read(sz);
+}
+
+// Interface with more than one members.
+type foobar = interface {
+	foo(x : int) -> int;
+	bar(x : int) -> int;
+}

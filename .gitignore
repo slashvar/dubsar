@@ -1,0 +1,13 @@
+# Meson build directories
+build/
+builddir/
+
+# Tooling caches
+.cache/
+.claude/
+
+# Compiled objects and binaries that may end up in src/ from manual builds
+src/*.o
+src/*.c
+src/*.h.gch
+src/dubsar

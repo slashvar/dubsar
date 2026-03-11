@@ -1,0 +1,38 @@
+fun fact(n) {
+    if (n < 2) {
+        return 1;
+    }
+    return (n * fact((n - 1)));
+}
+
+fun euclid(a, b) {
+    return (a / b), (a % b);
+}
+
+fun swap(a : ref, b : ref) {
+    a, b = b, a;
+}
+
+fun fibonacci(n) {
+    if (n < 2) {
+        return 0, 1;
+    }
+    var n1, n2 = fibonacci((n - 1));
+    return (n1 + n2), n1;
+}
+
+fun sum(v : vector<int>) {
+    var r = 0;
+    for var i = 0; (i < v.size()); ++i {
+        r += v[i];
+    }
+    return r;
+}
+
+fun sum2(v) {
+    var r = 0;
+    for var x = range(v) {
+        r += x;
+    }
+    return r;
+}

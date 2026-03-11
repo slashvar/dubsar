@@ -1,0 +1,4 @@
+// Function with fully inferred types.
+fun square(n) {
+    return n * n;
+}

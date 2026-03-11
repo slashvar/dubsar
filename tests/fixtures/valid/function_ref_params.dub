@@ -1,0 +1,6 @@
+// Function with reference parameters.
+fun swap(a : ref, b : ref) {
+    var tmp = a;
+    a = b;
+    b = tmp;
+}
