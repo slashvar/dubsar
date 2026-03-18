@@ -459,12 +459,11 @@ for_stmt
         }
     | FOR expr ';' expr ';' expr compound_stmt
         {
-            // Not yet implemented. Release allocated nodes to avoid leaks.
-            delete static_cast<ExprNode*>($2);
-            delete static_cast<ExprNode*>($4);
-            delete static_cast<ExprNode*>($6);
-            delete static_cast<StmtNode*>($7);
-            $$ = nullptr;
+            $$ = new ForStmtNode(
+                new ExprStmtNode(static_cast<ExprNode*>($2)),
+                static_cast<ExprNode*>($4),
+                static_cast<ExprNode*>($6),
+                static_cast<StmtNode*>($7));
         }
     ;
 
