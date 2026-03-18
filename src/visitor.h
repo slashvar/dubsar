@@ -33,6 +33,7 @@ class tuple_var_decl_node;
 class tuple_assign_stmt_node;
 class for_range_stmt_node;
 class continue_stmt_node;
+class break_stmt_node;
 class init_list_expr_node;
 class program_node;
 
@@ -72,6 +73,7 @@ public:
     virtual void visit(const tuple_assign_stmt_node&) = 0;
     virtual void visit(const for_range_stmt_node&) = 0;
     virtual void visit(const continue_stmt_node&) = 0;
+    virtual void visit(const break_stmt_node&) = 0;
     virtual void visit(const init_list_expr_node&) = 0;
     virtual void visit(const program_node&) = 0;
     virtual ~visitor() = default;

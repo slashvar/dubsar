@@ -1,0 +1,8 @@
+fun search(n: int) -> int {
+    for var i = 0; i < n; ++i {
+        if (i == 5) {
+            break;
+        }
+    }
+    return 0;
+}

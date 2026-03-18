@@ -1,0 +1,6 @@
+fun early_exit(x: int) {
+    if (x == 0) {
+        return;
+    }
+    return;
+}

@@ -40,7 +40,7 @@ void yyerror(const char* s);
 
 %token <stringval> IDENTIFIER
 %token <intval> NUMBER
-%token FUN VAR REF RETURN FOR IF ELSE CONTINUE
+%token FUN VAR REF RETURN FOR IF ELSE CONTINUE BREAK
 %token LE GE EQ NE AND OR
 %token INC DEC
 %token PLUS_EQ MINUS_EQ STAR_EQ SLASH_EQ
@@ -53,7 +53,7 @@ void yyerror(const char* s);
 %type <node> for_stmt return_stmt var_decl
 %type <node> type_decl struct_type program method_decl
 %type <node> interface_type interface_method
-%type <node> if_stmt tuple_var_decl tuple_assign_stmt for_range_stmt continue_stmt
+%type <node> if_stmt tuple_var_decl tuple_assign_stmt for_range_stmt continue_stmt break_stmt
 %type <node> tuple_expr
 %type <paramvec> param_list_opt param_list
 %type <stringval> type_spec method_name
@@ -125,6 +125,7 @@ stmt
     | return_stmt
     | if_stmt
     | continue_stmt
+    | break_stmt
     | tuple_assign_stmt
     | expr ';'
         {
@@ -464,6 +465,8 @@ return_stmt
         { $$ = new return_stmt_node(static_cast<expr_node*>($2)); }
     | RETURN tuple_expr ';'
         { $$ = new return_stmt_node(static_cast<expr_node*>($2)); }
+    | RETURN ';'
+        { $$ = new return_stmt_node(nullptr); }
     ;
 
 if_stmt
@@ -483,6 +486,11 @@ if_stmt
 continue_stmt
     : CONTINUE ';'
         { $$ = new continue_stmt_node(); }
+    ;
+
+break_stmt
+    : BREAK ';'
+        { $$ = new break_stmt_node(); }
     ;
 
 for_range_stmt
