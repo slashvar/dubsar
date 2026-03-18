@@ -29,6 +29,7 @@
 "if"                 { return IF; }
 "else"               { return ELSE; }
 "continue"           { return CONTINUE; }
+"break"              { return BREAK; }
 
 "<="                 { return LE; }
 ">="                 { return GE; }

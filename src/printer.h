@@ -44,6 +44,7 @@ public:
     void visit(const tuple_assign_stmt_node&) override;
     void visit(const for_range_stmt_node&) override;
     void visit(const continue_stmt_node&) override;
+    void visit(const break_stmt_node&) override;
     void visit(const init_list_expr_node&) override;
     void visit(const program_node&) override;
 

@@ -37,6 +37,7 @@ class tuple_var_decl_node;
 class tuple_assign_stmt_node;
 class for_range_stmt_node;
 class continue_stmt_node;
+class break_stmt_node;
 class init_list_expr_node;
 
 // Global root for the AST - defined in ast.cpp
@@ -315,6 +316,12 @@ public:
 };
 
 class continue_stmt_node : public stmt_node {
+public:
+    void accept(visitor& v) const override { v.visit(*this); }
+    [[nodiscard]] bool needs_semicolon() const noexcept override { return true; }
+};
+
+class break_stmt_node : public stmt_node {
 public:
     void accept(visitor& v) const override { v.visit(*this); }
     [[nodiscard]] bool needs_semicolon() const noexcept override { return true; }

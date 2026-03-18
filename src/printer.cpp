@@ -69,8 +69,11 @@ void printer::visit(const var_decl_node& node) {
 // Prints without trailing semicolon; compound_stmt_node adds it via
 // needs_semicolon().
 void printer::visit(const return_stmt_node& node) {
-    out_ << "return ";
-    node.value->accept(*this);
+    out_ << "return";
+    if (node.value) {
+        out_ << ' ';
+        node.value->accept(*this);
+    }
 }
 
 // Grammar: for var_decl expr ; expr body
@@ -234,6 +237,8 @@ void printer::visit(const if_stmt_node& node) {
 }
 
 void printer::visit(const continue_stmt_node& /*node*/) { out_ << "continue"; }
+
+void printer::visit(const break_stmt_node& /*node*/) { out_ << "break"; }
 
 void printer::visit(const init_list_expr_node& node) {
     out_ << '{';

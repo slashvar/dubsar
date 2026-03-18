@@ -54,6 +54,8 @@ valid_cases = [
     'example2',
     'for_expr_loop',
     'method_params',
+    'break',
+    'void_return',
 ]
 
 foreach name : valid_cases
