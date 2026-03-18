@@ -18,7 +18,7 @@ Currently implements lexing, parsing, AST construction, and pretty-printing.
 - C-style `for` loops: `for var i = 0; i < n; ++i { ... }` and `for expr; expr; expr { ... }`
 - Range-based `for` loops: `for var item = range(collection) { ... }`
 - `if`/`else` statements
-- `continue`
+- `continue` and `break`
 - Arithmetic operators (including `%`), comparison, and logical operators (`&&`, `||`, `!`)
 - Compound assignment operators (`+=`, `-=`, `*=`, `/=`)
 - Pre/post increment/decrement (`++`/`--`)
