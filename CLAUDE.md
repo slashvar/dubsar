@@ -33,12 +33,12 @@ The pipeline is: `.dub` source file → **Lexer** → **Parser** → **AST** →
 ### Source files (`src/`)
 
 - `lexer.l` — Flex lexer. Keywords: `fun`, `var`, `ref`, `return`, `for`, `type`, `struct`, `string`, `interface`, `if`, `else`, `continue`. Operators include arithmetic (including `%`), comparison, logical, pre/post increment/decrement, compound assignment (`+=`, `-=`, `*=`, `/=`), `::`, `->`, and indexing `[]`. Supports `//` and `/* */` comments. Includes the generated `parser.hpp` for `YYSTYPE` and token constants (no local union definition).
-- `parser.y` — Bison grammar. Produces a `ProgramNode*` in the global `root` variable. Handles: function/method/type declarations at top level, `var` declarations, `for`/for-range loops, `if`/`else`, `return`, `continue`, compound statements, tuple declarations/assignments, and expressions. Uses `%code requires {}` to embed forward declarations (from `parser_types.h`) into the generated `parser.hpp`. Uses `%destructor` rules (one per union type tag) to delete raw pointers discarded during error recovery. The build uses `-Wextra -Werror`; generated Flex/Bison sources are compiled without `-Werror` to suppress unavoidable warnings.
-- `ast.h` / `ast.cpp` — AST node class hierarchy. `ProgramNode` is the root. All nodes implement `accept(Visitor&)` for the visitor pattern. `ast.cpp` defines the global `root` variable.
-- `visitor.h` — Abstract `Visitor` base class with `visit()` overloads for every node type.
-- `printer.h` / `printer.cpp` — `Printer` concrete visitor for AST pretty-printing. Adds parentheses around all binary ops for round-trip stability (avoids any precedence ambiguity on re-parse).
+- `parser.y` — Bison grammar. Produces a `program_node*` in the global `root` variable. Handles: function/method/type declarations at top level, `var` declarations, `for`/for-range loops, `if`/`else`, `return`, `continue`, compound statements, tuple declarations/assignments, and expressions. Uses `%code requires {}` to embed forward declarations (from `parser_types.h`) into the generated `parser.hpp`. Uses `%destructor` rules (one per union type tag) to delete raw pointers discarded during error recovery. The build uses `-Wextra -Werror`; generated Flex/Bison sources are compiled without `-Werror` to suppress unavoidable warnings.
+- `ast.h` / `ast.cpp` — AST node class hierarchy. `program_node` is the root. All nodes implement `accept(visitor&)` for the visitor pattern. `ast.cpp` defines the global `root` variable.
+- `visitor.h` — Abstract `visitor` base class with `visit()` overloads for every node type.
+- `printer.h` / `printer.cpp` — `printer` concrete visitor for AST pretty-printing. Adds parentheses around all binary ops for round-trip stability (avoids any precedence ambiguity on re-parse).
 - `parser_types.h` — Forward declarations of all AST node classes. Included via `%code requires {}` in `parser.y` so it appears in the generated `parser.hpp`, making the declarations available to any file that includes that header (including the lexer).
-- `main.cpp` — Entry point: opens a file, calls `yyparse()`, then calls `Printer` on the AST root.
+- `main.cpp` — Entry point: opens a file, calls `yyparse()`, then calls `printer` on the AST root.
 
 ### Build-generated files (`build/src/`)
 
@@ -47,25 +47,25 @@ The pipeline is: `.dub` source file → **Lexer** → **Parser** → **AST** →
 ### AST Node Hierarchy
 
 ```
-ASTNode
-├── ExprNode
-│   ├── IdentifierNode, NumberNode, StringNode
-│   ├── BinaryOpNode, UnaryOpNode, AssignNode, CompoundAssignNode
-│   ├── CallNode, MemberCallNode, QualifiedCallNode
-│   ├── IndexNode, TupleExprNode, InitListExprNode
+ast_node
+├── expr_node
+│   ├── identifier_node, number_node, string_node
+│   ├── binary_op_node, unary_op_node, assign_node, compound_assign_node
+│   ├── call_node, member_call_node, qualified_call_node
+│   ├── index_node, tuple_expr_node, init_list_expr_node
 │
-├── StmtNode
-│   ├── ExprStmtNode, VarDeclNode, TupleVarDeclNode, TupleAssignStmtNode
-│   ├── ReturnStmtNode, CompoundStmtNode
-│   ├── ForStmtNode, ForRangeStmtNode, ContinueStmtNode
-│   └── IfStmtNode
+├── stmt_node
+│   ├── expr_stmt_node, var_decl_node, tuple_var_decl_node, tuple_assign_stmt_node
+│   ├── return_stmt_node, compound_stmt_node
+│   ├── for_stmt_node, for_range_stmt_node, continue_stmt_node
+│   └── if_stmt_node
 │
-└── DeclNode (extends StmtNode)
-    ├── ParamNode, FuncDeclNode, MethodDeclNode
-    ├── StructFieldNode, TypeDeclNode, ProgramNode
-    └── TypeBodyNode
-        ├── StructTypeNode
-        └── InterfaceTypeNode (with InterfaceMethodNode)
+└── decl_node (extends stmt_node)
+    ├── param_node, func_decl_node, method_decl_node
+    ├── struct_field_node, type_decl_node, program_node
+    └── type_body_node
+        ├── struct_type_node
+        └── interface_type_node (with interface_method_node)
 ```
 
 ### Language Features
@@ -74,9 +74,9 @@ ASTNode
 - **Parameters**: by-value (`p`), by-value typed (`p: int`), by-ref (`p: ref`), by-ref typed (`p: int ref`)
 - **Variables**: `var x = 10;`, `var x: int = 10;`, tuple `var x, y = func();`, init-list `var v: vector<int> = {};`
 - **Type declarations**: structs (`type point = struct { x: int; y: int; }`), inheritance (`struct : ParentType`), interfaces (`type reader = interface { read(sz: int) -> vector<byte>; }`)
-- **Methods**: `fun TypeName::methodName(p: int) -> ReturnType { ... }`, called as `obj.method(args)`. Parameters are stored in `MethodDeclNode` (same as `FuncDeclNode`) and printed by the shared `printParams` helper.
+- **Methods**: `fun TypeName::methodName(p: int) -> ReturnType { ... }`, called as `obj.method(args)`. Parameters are stored in `method_decl_node` (same as `func_decl_node`) and printed by the shared `print_params` helper.
 - **Qualified calls**: `ns::func(args)`
-- **C-style for loop**: `for var i = 0; i < n; ++i { ... }` (no parens, no semicolon before body). Only the `for var name = init; cond; incr` form is implemented; the three-expression form (`for expr; expr; expr`) exists in the grammar but is not implemented (returns nullptr).
+- **C-style for loop**: two forms (no parens, no semicolon before body): `for var i = 0; i < n; ++i { ... }` (var-decl init) and `for expr; expr; expr { ... }` (expression init, e.g. `for i = 1; i <= n; i = i + 1 { ... }`).
 - **Range-based for**: `for var item = range(collection) { ... }`
 - **If/else**: `if cond { ... }` / `if cond { ... } else { ... }`
 - **Continue**: `continue;`
@@ -93,7 +93,7 @@ tests/
     valid/                 — 13 roundtrip test fixtures (parse→print→parse→compare)
     invalid/               — 4 error test fixtures (expect non-zero exit)
 examples/
-  example.dub              — Core language features (also run as a roundtrip test)
+  example.dub              — Core language features (also run as a 14th roundtrip test)
   example2.dub             — Tuples, vectors, for-range
   interface.dub            — Interface syntax
   sieve.dub                — Sieve of Eratosthenes

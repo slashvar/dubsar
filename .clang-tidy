@@ -30,19 +30,19 @@ HeaderFilterRegex: '^.*/src/(ast|visitor|printer|parser_types)\.h$'
 
 CheckOptions:
   - key: readability-identifier-naming.ClassCase
-    value: CamelCase
+    value: lower_case
   - key: readability-identifier-naming.StructCase
-    value: CamelCase
+    value: lower_case
   - key: readability-identifier-naming.FunctionCase
-    value: camelBack
+    value: lower_case
   - key: readability-identifier-naming.MethodCase
-    value: camelBack
+    value: lower_case
   - key: readability-identifier-naming.MemberCase
-    value: camelBack
+    value: lower_case
   - key: readability-identifier-naming.ParameterCase
-    value: camelBack
+    value: lower_case
   - key: readability-identifier-naming.LocalVariableCase
-    value: camelBack
+    value: lower_case
   - key: modernize-use-default-member-init.UseAssignment
     value: 'true'
   - key: cppcoreguidelines-special-member-functions.AllowSoleDefaultDtor

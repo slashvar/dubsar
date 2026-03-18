@@ -1,3 +1,3 @@
 #include "ast.h"
 
-std::unique_ptr<ProgramNode> root;
+std::unique_ptr<program_node> root;

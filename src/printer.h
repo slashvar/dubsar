@@ -9,43 +9,43 @@
 
 // Visitor that serialises an AST back to valid dubsar source code.
 // The output is stable under round-trip: parsing the output and running the
-// Printer again produces identical text.
-class Printer : public Visitor {
+// printer again produces identical text.
+class printer : public visitor {
 public:
-    explicit Printer(std::ostream& out) : out_(out) {}
+    explicit printer(std::ostream& out) : out_(out) {}
 
-    void visit(const IdentifierNode&) override;
-    void visit(const NumberNode&) override;
-    void visit(const StringNode&) override;
-    void visit(const BinaryOpNode&) override;
-    void visit(const UnaryOpNode&) override;
-    void visit(const AssignNode&) override;
-    void visit(const ExprStmtNode&) override;
-    void visit(const ParamNode&) override;
-    void visit(const VarDeclNode&) override;
-    void visit(const ReturnStmtNode&) override;
-    void visit(const ForStmtNode&) override;
-    void visit(const CompoundStmtNode&) override;
-    void visit(const FuncDeclNode&) override;
-    void visit(const StructFieldNode&) override;
-    void visit(const StructTypeNode&) override;
-    void visit(const MethodDeclNode&) override;
-    void visit(const TypeDeclNode&) override;
-    void visit(const InterfaceTypeNode&) override;
-    void visit(const InterfaceMethodNode&) override;
-    void visit(const MemberCallNode&) override;
-    void visit(const QualifiedCallNode&) override;
-    void visit(const CallNode&) override;
-    void visit(const IndexNode&) override;
-    void visit(const CompoundAssignNode&) override;
-    void visit(const IfStmtNode&) override;
-    void visit(const TupleExprNode&) override;
-    void visit(const TupleVarDeclNode&) override;
-    void visit(const TupleAssignStmtNode&) override;
-    void visit(const ForRangeStmtNode&) override;
-    void visit(const ContinueStmtNode&) override;
-    void visit(const InitListExprNode&) override;
-    void visit(const ProgramNode&) override;
+    void visit(const identifier_node&) override;
+    void visit(const number_node&) override;
+    void visit(const string_node&) override;
+    void visit(const binary_op_node&) override;
+    void visit(const unary_op_node&) override;
+    void visit(const assign_node&) override;
+    void visit(const expr_stmt_node&) override;
+    void visit(const param_node&) override;
+    void visit(const var_decl_node&) override;
+    void visit(const return_stmt_node&) override;
+    void visit(const for_stmt_node&) override;
+    void visit(const compound_stmt_node&) override;
+    void visit(const func_decl_node&) override;
+    void visit(const struct_field_node&) override;
+    void visit(const struct_type_node&) override;
+    void visit(const method_decl_node&) override;
+    void visit(const type_decl_node&) override;
+    void visit(const interface_type_node&) override;
+    void visit(const interface_method_node&) override;
+    void visit(const member_call_node&) override;
+    void visit(const qualified_call_node&) override;
+    void visit(const call_node&) override;
+    void visit(const index_node&) override;
+    void visit(const compound_assign_node&) override;
+    void visit(const if_stmt_node&) override;
+    void visit(const tuple_expr_node&) override;
+    void visit(const tuple_var_decl_node&) override;
+    void visit(const tuple_assign_stmt_node&) override;
+    void visit(const for_range_stmt_node&) override;
+    void visit(const continue_stmt_node&) override;
+    void visit(const init_list_expr_node&) override;
+    void visit(const program_node&) override;
 
 private:
     std::ostream& out_;
@@ -56,7 +56,7 @@ private:
     // Emit `indent_ + extra` spaces without changing indent_.
     void pad(int extra) const;
     // Emit a comma-separated parameter list (no surrounding parens).
-    void printParams(const std::vector<std::unique_ptr<ParamNode>>& params);
+    void print_params(const std::vector<std::unique_ptr<param_node>>& params);
 };
 
 #endif  // PRINTER_H

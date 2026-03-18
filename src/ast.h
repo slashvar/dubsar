@@ -8,335 +8,339 @@
 #include "visitor.h"
 
 // Forward declarations
-class ASTNode;
-class ExprNode;
-class StmtNode;
-class DeclNode;
-class TypeBodyNode;
-class ProgramNode;
-class FuncDeclNode;
-class VarDeclNode;
-class ForStmtNode;
-class CompoundStmtNode;
-class ExprStmtNode;
-class ParamNode;
-class TypeDeclNode;
-class StructTypeNode;
-class StructFieldNode;
-class MethodDeclNode;
-class InterfaceTypeNode;
-class InterfaceMethodNode;
-class MemberCallNode;
-class QualifiedCallNode;
-class CallNode;
-class IndexNode;
-class CompoundAssignNode;
-class IfStmtNode;
-class TupleExprNode;
-class TupleVarDeclNode;
-class TupleAssignStmtNode;
-class ForRangeStmtNode;
-class ContinueStmtNode;
-class InitListExprNode;
+class ast_node;
+class expr_node;
+class stmt_node;
+class decl_node;
+class type_body_node;
+class program_node;
+class func_decl_node;
+class var_decl_node;
+class for_stmt_node;
+class compound_stmt_node;
+class expr_stmt_node;
+class param_node;
+class type_decl_node;
+class struct_type_node;
+class struct_field_node;
+class method_decl_node;
+class interface_type_node;
+class interface_method_node;
+class member_call_node;
+class qualified_call_node;
+class call_node;
+class index_node;
+class compound_assign_node;
+class if_stmt_node;
+class tuple_expr_node;
+class tuple_var_decl_node;
+class tuple_assign_stmt_node;
+class for_range_stmt_node;
+class continue_stmt_node;
+class init_list_expr_node;
 
 // Global root for the AST - defined in ast.cpp
-extern std::unique_ptr<ProgramNode> root;
+extern std::unique_ptr<program_node> root;
 
-class ASTNode {
+class ast_node {
 public:
-    virtual void accept(Visitor& v) const = 0;
-    [[nodiscard]] virtual bool needsSemicolon() const noexcept { return false; }
-    virtual ~ASTNode() = default;
+    virtual void accept(visitor& v) const = 0;
+    [[nodiscard]] virtual bool needs_semicolon() const noexcept { return false; }
+    virtual ~ast_node() = default;
 };
 
-class ExprNode : public ASTNode {};
+class expr_node : public ast_node {};
 
-class StmtNode : public ASTNode {};
+class stmt_node : public ast_node {};
 
-// DeclNode inherits StmtNode: declarations are valid statement-context nodes,
+// decl_node inherits stmt_node: declarations are valid statement-context nodes,
 // which avoids undefined-behaviour casts in compound-statement handling.
-class DeclNode : public StmtNode {};
+class decl_node : public stmt_node {};
 
 // Abstract base for type bodies (struct and interface).
-class TypeBodyNode : public ASTNode {};
+class type_body_node : public ast_node {};
 
-class IdentifierNode : public ExprNode {
+class identifier_node : public expr_node {
 public:
     std::string name;
-    explicit IdentifierNode(std::string n) noexcept : name(std::move(n)) {}
-    void accept(Visitor& v) const override { v.visit(*this); }
+    explicit identifier_node(std::string n) noexcept : name(std::move(n)) {}
+    void accept(visitor& v) const override { v.visit(*this); }
 };
 
-class NumberNode : public ExprNode {
+class number_node : public expr_node {
 public:
     int value;
-    explicit NumberNode(int v) noexcept : value(v) {}
-    void accept(Visitor& v) const override { v.visit(*this); }
+    explicit number_node(int v) noexcept : value(v) {}
+    void accept(visitor& v) const override { v.visit(*this); }
 };
 
-class StringNode : public ExprNode {
+class string_node : public expr_node {
 public:
     std::string value;
-    explicit StringNode(std::string v) noexcept : value(std::move(v)) {}
-    void accept(Visitor& v) const override { v.visit(*this); }
+    explicit string_node(std::string v) noexcept : value(std::move(v)) {}
+    void accept(visitor& v) const override { v.visit(*this); }
 };
 
-class BinaryOpNode : public ExprNode {
+class binary_op_node : public expr_node {
 public:
     std::string op;
-    std::unique_ptr<ExprNode> left;
-    std::unique_ptr<ExprNode> right;
-    BinaryOpNode(std::string o, ExprNode* l, ExprNode* r) : op(std::move(o)), left(l), right(r) {}
-    void accept(Visitor& v) const override { v.visit(*this); }
+    std::unique_ptr<expr_node> left;
+    std::unique_ptr<expr_node> right;
+    binary_op_node(std::string o, expr_node* l, expr_node* r)
+        : op(std::move(o)), left(l), right(r) {}
+    void accept(visitor& v) const override { v.visit(*this); }
 };
 
-class UnaryOpNode : public ExprNode {
+class unary_op_node : public expr_node {
 public:
     std::string op;
-    std::unique_ptr<ExprNode> operand;
-    UnaryOpNode(std::string o, ExprNode* a) : op(std::move(o)), operand(a) {}
-    void accept(Visitor& v) const override { v.visit(*this); }
+    std::unique_ptr<expr_node> operand;
+    unary_op_node(std::string o, expr_node* a) : op(std::move(o)), operand(a) {}
+    void accept(visitor& v) const override { v.visit(*this); }
 };
 
-class AssignNode : public ExprNode {
+class assign_node : public expr_node {
 public:
-    std::unique_ptr<ExprNode> lhs;
-    std::unique_ptr<ExprNode> rhs;
-    AssignNode(ExprNode* l, ExprNode* r) : lhs(l), rhs(r) {}
-    void accept(Visitor& v) const override { v.visit(*this); }
+    std::unique_ptr<expr_node> lhs;
+    std::unique_ptr<expr_node> rhs;
+    assign_node(expr_node* l, expr_node* r) : lhs(l), rhs(r) {}
+    void accept(visitor& v) const override { v.visit(*this); }
 };
 
 // Wraps an expression used in statement position, eliminating the need for
-// an undefined ExprNode* -> StmtNode* reinterpret cast.
-class ExprStmtNode : public StmtNode {
+// an undefined expr_node* -> stmt_node* reinterpret cast.
+class expr_stmt_node : public stmt_node {
 public:
-    std::unique_ptr<ExprNode> expr;
-    explicit ExprStmtNode(ExprNode* e) noexcept : expr(e) {}
-    void accept(Visitor& v) const override { v.visit(*this); }
-    [[nodiscard]] bool needsSemicolon() const noexcept override { return true; }
+    std::unique_ptr<expr_node> expr;
+    explicit expr_stmt_node(expr_node* e) noexcept : expr(e) {}
+    void accept(visitor& v) const override { v.visit(*this); }
+    [[nodiscard]] bool needs_semicolon() const noexcept override { return true; }
 };
 
-class ParamNode : public DeclNode {
+class param_node : public decl_node {
 public:
     std::string name;
     std::string type;
-    bool isRef;
-    ParamNode(std::string n, std::string t, bool r)
-        : name(std::move(n)), type(std::move(t)), isRef(r) {}
-    void accept(Visitor& v) const override { v.visit(*this); }
+    bool is_ref;
+    param_node(std::string n, std::string t, bool r)
+        : name(std::move(n)), type(std::move(t)), is_ref(r) {}
+    void accept(visitor& v) const override { v.visit(*this); }
 };
 
-class VarDeclNode : public StmtNode {
+class var_decl_node : public stmt_node {
 public:
     std::string name;
     std::string type;
-    std::unique_ptr<ExprNode> init;
-    VarDeclNode(std::string n, std::string t, ExprNode* i)
+    std::unique_ptr<expr_node> init;
+    var_decl_node(std::string n, std::string t, expr_node* i)
         : name(std::move(n)), type(std::move(t)), init(i) {}
-    void accept(Visitor& v) const override { v.visit(*this); }
-    [[nodiscard]] bool needsSemicolon() const noexcept override { return true; }
+    void accept(visitor& v) const override { v.visit(*this); }
+    [[nodiscard]] bool needs_semicolon() const noexcept override { return true; }
 };
 
-class ReturnStmtNode : public StmtNode {
+class return_stmt_node : public stmt_node {
 public:
-    std::unique_ptr<ExprNode> value;
-    explicit ReturnStmtNode(ExprNode* v) noexcept : value(v) {}
-    void accept(Visitor& vis) const override { vis.visit(*this); }
-    [[nodiscard]] bool needsSemicolon() const noexcept override { return true; }
+    std::unique_ptr<expr_node> value;
+    explicit return_stmt_node(expr_node* v) noexcept : value(v) {}
+    void accept(visitor& vis) const override { vis.visit(*this); }
+    [[nodiscard]] bool needs_semicolon() const noexcept override { return true; }
 };
 
-class ForStmtNode : public StmtNode {
+class for_stmt_node : public stmt_node {
 public:
-    std::unique_ptr<StmtNode> init;
-    std::unique_ptr<ExprNode> condition;
-    std::unique_ptr<ExprNode> increment;
-    std::unique_ptr<StmtNode> body;
-    ForStmtNode(StmtNode* i, ExprNode* c, ExprNode* inc, StmtNode* b)
+    std::unique_ptr<stmt_node> init;
+    std::unique_ptr<expr_node> condition;
+    std::unique_ptr<expr_node> increment;
+    std::unique_ptr<stmt_node> body;
+    for_stmt_node(stmt_node* i, expr_node* c, expr_node* inc, stmt_node* b)
         : init(i), condition(c), increment(inc), body(b) {}
-    void accept(Visitor& v) const override { v.visit(*this); }
+    void accept(visitor& v) const override { v.visit(*this); }
 };
 
-class CompoundStmtNode : public StmtNode {
+class compound_stmt_node : public stmt_node {
 public:
-    std::vector<std::unique_ptr<StmtNode>> statements;
-    void add(StmtNode* s) { statements.emplace_back(s); }
-    void accept(Visitor& v) const override { v.visit(*this); }
+    std::vector<std::unique_ptr<stmt_node>> statements;
+    void add(stmt_node* s) { statements.emplace_back(s); }
+    void accept(visitor& v) const override { v.visit(*this); }
 };
 
-class FuncDeclNode : public DeclNode {
+class func_decl_node : public decl_node {
 public:
     std::string name;
-    std::vector<std::unique_ptr<ParamNode>> params;
-    std::string returnType;
-    std::unique_ptr<StmtNode> body;
-    FuncDeclNode(std::string n, std::string rt, StmtNode* b)
-        : name(std::move(n)), returnType(std::move(rt)), body(b) {}
-    void accept(Visitor& v) const override { v.visit(*this); }
+    std::vector<std::unique_ptr<param_node>> params;
+    std::string return_type;
+    std::unique_ptr<stmt_node> body;
+    func_decl_node(std::string n, std::string rt, stmt_node* b)
+        : name(std::move(n)), return_type(std::move(rt)), body(b) {}
+    void accept(visitor& v) const override { v.visit(*this); }
 };
 
-class StructFieldNode : public DeclNode {
+class struct_field_node : public decl_node {
 public:
     std::string name;
     std::string type;
-    StructFieldNode(std::string n, std::string t) : name(std::move(n)), type(std::move(t)) {}
-    void accept(Visitor& v) const override { v.visit(*this); }
+    struct_field_node(std::string n, std::string t) : name(std::move(n)), type(std::move(t)) {}
+    void accept(visitor& v) const override { v.visit(*this); }
 };
 
-class StructTypeNode : public TypeBodyNode {
+class struct_type_node : public type_body_node {
 public:
     std::string name;
     std::string parent;
-    std::vector<std::unique_ptr<StructFieldNode>> fields;
-    StructTypeNode(std::string n, std::string p) : name(std::move(n)), parent(std::move(p)) {}
-    void addField(StructFieldNode* f) { fields.emplace_back(f); }
-    void accept(Visitor& v) const override { v.visit(*this); }
+    std::vector<std::unique_ptr<struct_field_node>> fields;
+    struct_type_node(std::string n, std::string p) : name(std::move(n)), parent(std::move(p)) {}
+    void add_field(struct_field_node* f) { fields.emplace_back(f); }
+    void accept(visitor& v) const override { v.visit(*this); }
 };
 
-class MethodDeclNode : public DeclNode {
+class method_decl_node : public decl_node {
 public:
-    std::string typeName;
+    std::string type_name;
     std::string name;
-    std::vector<std::unique_ptr<ParamNode>> params;
-    std::string returnType;
-    std::unique_ptr<StmtNode> body;
-    MethodDeclNode(std::string tn, std::string n, std::string rt, StmtNode* b)
-        : typeName(std::move(tn)), name(std::move(n)), returnType(std::move(rt)), body(b) {}
-    void accept(Visitor& v) const override { v.visit(*this); }
+    std::vector<std::unique_ptr<param_node>> params;
+    std::string return_type;
+    std::unique_ptr<stmt_node> body;
+    method_decl_node(std::string tn, std::string n, std::string rt, stmt_node* b)
+        : type_name(std::move(tn)), name(std::move(n)), return_type(std::move(rt)), body(b) {}
+    void accept(visitor& v) const override { v.visit(*this); }
 };
 
-class TypeDeclNode : public DeclNode {
-public:
-    std::string name;
-    std::unique_ptr<TypeBodyNode> body;
-    TypeDeclNode(std::string n, TypeBodyNode* b) : name(std::move(n)), body(b) {}
-    void accept(Visitor& v) const override { v.visit(*this); }
-};
-
-class InterfaceMethodNode : public ASTNode {
+class type_decl_node : public decl_node {
 public:
     std::string name;
-    std::vector<std::unique_ptr<ParamNode>> params;
-    std::string returnType;
-    InterfaceMethodNode(std::string n, std::string rt)
-        : name(std::move(n)), returnType(std::move(rt)) {}
-    void accept(Visitor& v) const override { v.visit(*this); }
+    std::unique_ptr<type_body_node> body;
+    type_decl_node(std::string n, type_body_node* b) : name(std::move(n)), body(b) {}
+    void accept(visitor& v) const override { v.visit(*this); }
 };
 
-class InterfaceTypeNode : public TypeBodyNode {
+class interface_method_node : public ast_node {
 public:
-    std::vector<std::unique_ptr<InterfaceMethodNode>> methods;
-    void addMethod(InterfaceMethodNode* m) { methods.emplace_back(m); }
-    void accept(Visitor& v) const override { v.visit(*this); }
+    std::string name;
+    std::vector<std::unique_ptr<param_node>> params;
+    std::string return_type;
+    interface_method_node(std::string n, std::string rt)
+        : name(std::move(n)), return_type(std::move(rt)) {}
+    void accept(visitor& v) const override { v.visit(*this); }
 };
 
-class MemberCallNode : public ExprNode {
+class interface_type_node : public type_body_node {
 public:
-    std::unique_ptr<ExprNode> object;
+    std::vector<std::unique_ptr<interface_method_node>> methods;
+    void add_method(interface_method_node* m) { methods.emplace_back(m); }
+    void accept(visitor& v) const override { v.visit(*this); }
+};
+
+class member_call_node : public expr_node {
+public:
+    std::unique_ptr<expr_node> object;
     std::string method;
-    std::vector<std::unique_ptr<ExprNode>> args;
-    MemberCallNode(ExprNode* obj, std::string m) : object(obj), method(std::move(m)) {}
-    void accept(Visitor& v) const override { v.visit(*this); }
+    std::vector<std::unique_ptr<expr_node>> args;
+    member_call_node(expr_node* obj, std::string m) : object(obj), method(std::move(m)) {}
+    void accept(visitor& v) const override { v.visit(*this); }
 };
 
-class QualifiedCallNode : public ExprNode {
+class qualified_call_node : public expr_node {
 public:
     std::string qualifier;
     std::string name;
-    std::vector<std::unique_ptr<ExprNode>> args;
-    QualifiedCallNode(std::string q, std::string n) : qualifier(std::move(q)), name(std::move(n)) {}
-    void accept(Visitor& v) const override { v.visit(*this); }
+    std::vector<std::unique_ptr<expr_node>> args;
+    qualified_call_node(std::string q, std::string n)
+        : qualifier(std::move(q)), name(std::move(n)) {}
+    void accept(visitor& v) const override { v.visit(*this); }
 };
 
-class CallNode : public ExprNode {
+class call_node : public expr_node {
 public:
     std::string name;
-    std::vector<std::unique_ptr<ExprNode>> args;
-    explicit CallNode(std::string n) : name(std::move(n)) {}
-    void accept(Visitor& v) const override { v.visit(*this); }
+    std::vector<std::unique_ptr<expr_node>> args;
+    explicit call_node(std::string n) : name(std::move(n)) {}
+    void accept(visitor& v) const override { v.visit(*this); }
 };
 
-class IndexNode : public ExprNode {
+class index_node : public expr_node {
 public:
-    std::unique_ptr<ExprNode> base;
-    std::unique_ptr<ExprNode> index;
-    IndexNode(ExprNode* b, ExprNode* i) : base(b), index(i) {}
-    void accept(Visitor& v) const override { v.visit(*this); }
+    std::unique_ptr<expr_node> base;
+    std::unique_ptr<expr_node> index;
+    index_node(expr_node* b, expr_node* i) : base(b), index(i) {}
+    void accept(visitor& v) const override { v.visit(*this); }
 };
 
-class CompoundAssignNode : public ExprNode {
+class compound_assign_node : public expr_node {
 public:
     std::string op;
-    std::unique_ptr<ExprNode> lhs;
-    std::unique_ptr<ExprNode> rhs;
-    CompoundAssignNode(std::string o, ExprNode* l, ExprNode* r)
+    std::unique_ptr<expr_node> lhs;
+    std::unique_ptr<expr_node> rhs;
+    compound_assign_node(std::string o, expr_node* l, expr_node* r)
         : op(std::move(o)), lhs(l), rhs(r) {}
-    void accept(Visitor& v) const override { v.visit(*this); }
+    void accept(visitor& v) const override { v.visit(*this); }
 };
 
-class IfStmtNode : public StmtNode {
+class if_stmt_node : public stmt_node {
 public:
-    std::unique_ptr<ExprNode> condition;
-    std::unique_ptr<StmtNode> then_body;
-    std::unique_ptr<StmtNode> else_body;  // nullptr if no else
-    IfStmtNode(ExprNode* c, StmtNode* t, StmtNode* e) : condition(c), then_body(t), else_body(e) {}
-    void accept(Visitor& v) const override { v.visit(*this); }
+    std::unique_ptr<expr_node> condition;
+    std::unique_ptr<stmt_node> then_body;
+    std::unique_ptr<stmt_node> else_body;  // nullptr if no else
+    if_stmt_node(expr_node* c, stmt_node* t, stmt_node* e)
+        : condition(c), then_body(t), else_body(e) {}
+    void accept(visitor& v) const override { v.visit(*this); }
 };
 
 // Represents a tuple expression: e1, e2, ... (used in return and tuple-assign).
 // NOT part of the general expr grammar to avoid conflicts with arg-list commas.
-class TupleExprNode : public ExprNode {
+class tuple_expr_node : public expr_node {
 public:
-    std::vector<std::unique_ptr<ExprNode>> elements;
-    void add(ExprNode* e) { elements.emplace_back(e); }
-    void accept(Visitor& v) const override { v.visit(*this); }
+    std::vector<std::unique_ptr<expr_node>> elements;
+    void add(expr_node* e) { elements.emplace_back(e); }
+    void accept(visitor& v) const override { v.visit(*this); }
 };
 
-class TupleVarDeclNode : public StmtNode {
+class tuple_var_decl_node : public stmt_node {
 public:
     std::vector<std::string> names;
-    std::unique_ptr<ExprNode> init;
-    TupleVarDeclNode(std::vector<std::string> ns, ExprNode* i) : names(std::move(ns)), init(i) {}
-    void accept(Visitor& v) const override { v.visit(*this); }
-    [[nodiscard]] bool needsSemicolon() const noexcept override { return true; }
+    std::unique_ptr<expr_node> init;
+    tuple_var_decl_node(std::vector<std::string> ns, expr_node* i)
+        : names(std::move(ns)), init(i) {}
+    void accept(visitor& v) const override { v.visit(*this); }
+    [[nodiscard]] bool needs_semicolon() const noexcept override { return true; }
 };
 
-class TupleAssignStmtNode : public StmtNode {
+class tuple_assign_stmt_node : public stmt_node {
 public:
     std::vector<std::string> lhs_names;
-    std::unique_ptr<ExprNode> rhs;
-    TupleAssignStmtNode(std::vector<std::string> ns, ExprNode* r)
+    std::unique_ptr<expr_node> rhs;
+    tuple_assign_stmt_node(std::vector<std::string> ns, expr_node* r)
         : lhs_names(std::move(ns)), rhs(r) {}
-    void accept(Visitor& v) const override { v.visit(*this); }
-    [[nodiscard]] bool needsSemicolon() const noexcept override { return true; }
+    void accept(visitor& v) const override { v.visit(*this); }
+    [[nodiscard]] bool needs_semicolon() const noexcept override { return true; }
 };
 
-class ContinueStmtNode : public StmtNode {
+class continue_stmt_node : public stmt_node {
 public:
-    void accept(Visitor& v) const override { v.visit(*this); }
-    [[nodiscard]] bool needsSemicolon() const noexcept override { return true; }
+    void accept(visitor& v) const override { v.visit(*this); }
+    [[nodiscard]] bool needs_semicolon() const noexcept override { return true; }
 };
 
-class InitListExprNode : public ExprNode {
+class init_list_expr_node : public expr_node {
 public:
-    std::vector<std::unique_ptr<ExprNode>> args;
-    void accept(Visitor& v) const override { v.visit(*this); }
+    std::vector<std::unique_ptr<expr_node>> args;
+    void accept(visitor& v) const override { v.visit(*this); }
 };
 
-class ForRangeStmtNode : public StmtNode {
+class for_range_stmt_node : public stmt_node {
 public:
-    std::string varName;
-    std::unique_ptr<ExprNode> range;
-    std::unique_ptr<StmtNode> body;
-    ForRangeStmtNode(std::string n, ExprNode* r, StmtNode* b)
-        : varName(std::move(n)), range(r), body(b) {}
-    void accept(Visitor& v) const override { v.visit(*this); }
+    std::string var_name;
+    std::unique_ptr<expr_node> range;
+    std::unique_ptr<stmt_node> body;
+    for_range_stmt_node(std::string n, expr_node* r, stmt_node* b)
+        : var_name(std::move(n)), range(r), body(b) {}
+    void accept(visitor& v) const override { v.visit(*this); }
 };
 
-class ProgramNode : public ASTNode {
+class program_node : public ast_node {
 public:
-    std::vector<std::unique_ptr<DeclNode>> declarations;
-    void add(DeclNode* d) { declarations.emplace_back(d); }
-    void accept(Visitor& v) const override { v.visit(*this); }
+    std::vector<std::unique_ptr<decl_node>> declarations;
+    void add(decl_node* d) { declarations.emplace_back(d); }
+    void accept(visitor& v) const override { v.visit(*this); }
 };
 
 #endif  // AST_H
