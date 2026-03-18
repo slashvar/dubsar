@@ -33,7 +33,7 @@ The pipeline is: `.dub` source file → **Lexer** → **Parser** → **AST** →
 ### Source files (`src/`)
 
 - `lexer.l` — Flex lexer. Keywords: `fun`, `var`, `ref`, `return`, `for`, `type`, `struct`, `string`, `interface`, `if`, `else`, `continue`. Operators include arithmetic (including `%`), comparison, logical, pre/post increment/decrement, compound assignment (`+=`, `-=`, `*=`, `/=`), `::`, `->`, and indexing `[]`. Supports `//` and `/* */` comments. Includes the generated `parser.hpp` for `YYSTYPE` and token constants (no local union definition).
-- `parser.y` — Bison grammar. Produces a `ProgramNode*` in the global `root` variable. Handles: function/method/type declarations at top level, `var` declarations, `for`/for-range loops, `if`/`else`, `return`, `continue`, compound statements, tuple declarations/assignments, and expressions. Uses `%code requires {}` to embed forward declarations (from `parser_types.h`) into the generated `parser.hpp`. Uses `%destructor` rules (one per union type tag) to delete raw pointers discarded during error recovery. **Note:** `MethodDeclNode` does not store parameters — they are parsed for syntax checking and then deleted. The build uses `-Wextra -Werror`; generated Flex/Bison sources are compiled without `-Werror` to suppress unavoidable warnings.
+- `parser.y` — Bison grammar. Produces a `ProgramNode*` in the global `root` variable. Handles: function/method/type declarations at top level, `var` declarations, `for`/for-range loops, `if`/`else`, `return`, `continue`, compound statements, tuple declarations/assignments, and expressions. Uses `%code requires {}` to embed forward declarations (from `parser_types.h`) into the generated `parser.hpp`. Uses `%destructor` rules (one per union type tag) to delete raw pointers discarded during error recovery. The build uses `-Wextra -Werror`; generated Flex/Bison sources are compiled without `-Werror` to suppress unavoidable warnings.
 - `ast.h` / `ast.cpp` — AST node class hierarchy. `ProgramNode` is the root. All nodes implement `accept(Visitor&)` for the visitor pattern. `ast.cpp` defines the global `root` variable.
 - `visitor.h` — Abstract `Visitor` base class with `visit()` overloads for every node type.
 - `printer.h` / `printer.cpp` — `Printer` concrete visitor for AST pretty-printing. Adds parentheses around all binary ops for round-trip stability (avoids any precedence ambiguity on re-parse).
@@ -74,7 +74,7 @@ ASTNode
 - **Parameters**: by-value (`p`), by-value typed (`p: int`), by-ref (`p: ref`), by-ref typed (`p: int ref`)
 - **Variables**: `var x = 10;`, `var x: int = 10;`, tuple `var x, y = func();`, init-list `var v: vector<int> = {};`
 - **Type declarations**: structs (`type point = struct { x: int; y: int; }`), inheritance (`struct : ParentType`), interfaces (`type reader = interface { read(sz: int) -> vector<byte>; }`)
-- **Methods**: `fun TypeName::methodName() -> ReturnType { ... }`, called as `obj.method(args)`
+- **Methods**: `fun TypeName::methodName(p: int) -> ReturnType { ... }`, called as `obj.method(args)`. Parameters are stored in `MethodDeclNode` (same as `FuncDeclNode`) and printed by the shared `printParams` helper.
 - **Qualified calls**: `ns::func(args)`
 - **C-style for loop**: `for var i = 0; i < n; ++i { ... }` (no parens, no semicolon before body). Only the `for var name = init; cond; incr` form is implemented; the three-expression form (`for expr; expr; expr`) exists in the grammar but is not implemented (returns nullptr).
 - **Range-based for**: `for var item = range(collection) { ... }`
@@ -90,7 +90,7 @@ ASTNode
 tests/
   run_test.py              — Python test runner
   fixtures/
-    valid/                 — 11 roundtrip test fixtures (parse→print→parse→compare)
+    valid/                 — 13 roundtrip test fixtures (parse→print→parse→compare)
     invalid/               — 4 error test fixtures (expect non-zero exit)
 examples/
   example.dub              — Core language features (also run as a roundtrip test)
