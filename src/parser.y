@@ -1,17 +1,19 @@
+// %code requires is placed in both parser.cpp and the generated parser.hpp,
+// making these types available to any file that includes parser.hpp (e.g. the
+// lexer).
+%code requires {
+#include <string>
+#include <vector>
+#include "parser_types.h"
+}
+
 %{
 #include <cstdio>
 #include <cstdlib>
 #include <format>
 #include <iostream>
 #include <memory>
-#include <string>
-#include <vector>
 
-// Forward declarations for bison
-typedef struct yy_parser_context yy_parser_context;
-
-// Include minimal type definitions
-#include "parser_types.h"
 #include "ast.h"
 
 extern int yylex();
@@ -24,8 +26,7 @@ void yyerror(const char* s);
 // grammar semantic values. Ownership is transferred into AST node unique_ptr
 // members immediately at each construction site. String pointers are cleaned
 // up via local unique_ptr guards so that no explicit delete calls are needed.
-// Limitation: values left on the parse stack when a syntax error is recovered
-// will leak, as Bison does not invoke C++ destructors on discarded stack slots.
+// %destructor rules handle cleanup of values discarded during error recovery.
 %}
 
 %union {
@@ -71,6 +72,13 @@ void yyerror(const char* s);
 
 %start program
 
+/* Cleanup discarded stack values during error recovery. */
+%destructor { delete $$; } <node>
+%destructor { delete $$; } <stringval>
+%destructor { if ($$) { for (auto* n : *$$) delete n; delete $$; } } <nodevec>
+%destructor { if ($$) { for (auto* p : *$$) delete p; delete $$; } } <paramvec>
+%destructor { if ($$) { for (auto* s : *$$) delete s; delete $$; } } <namevec>
+
 %%
 
 program
@@ -84,6 +92,9 @@ program
                     root->add(static_cast<DeclNode*>(n));
                 }
             }
+            // Ownership is held by the global 'root'; set $$ to nullptr so
+            // the <node> %destructor safely calls delete nullptr on cleanup.
+            $$ = nullptr;
         }
     ;
 
