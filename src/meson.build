@@ -56,6 +56,13 @@ valid_cases = [
     'method_params',
     'break',
     'void_return',
+    'continue_stmt',
+    'compound_assign',
+    'postfix_ops',
+    'logical_not',
+    'init_list',
+    'nested_loops_break',
+    'tuple_typed_params',
 ]
 
 foreach name : valid_cases
@@ -71,12 +78,19 @@ test('roundtrip-full-example', python3,
             meson.project_source_root() / 'examples' / 'example.dub'],
      depends: dubsar)
 
+test('roundtrip-quicksort', python3,
+     args: [run_test, 'roundtrip', dubsar.full_path(),
+            meson.project_source_root() / 'examples' / 'quicksort.dub'],
+     depends: dubsar)
+
 # Error tests: the binary must exit non-zero.
 invalid_cases = [
     'missing_brace',
     'missing_semicolon',
     'unknown_token',
     'incomplete_fun',
+    'break_no_semicolon',
+    'continue_no_semicolon',
 ]
 
 foreach name : invalid_cases

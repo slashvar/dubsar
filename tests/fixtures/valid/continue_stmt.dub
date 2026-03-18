@@ -1,0 +1,20 @@
+// continue statement in for and for-range loops.
+fun skip_evens(n : int) -> int {
+    var total : int = 0;
+    for var i = 0; i < n; ++i {
+        if (i == 2) {
+            continue;
+        }
+        total = total + i;
+    }
+    return total;
+}
+
+fun skip_range(v : vector<int>) {
+    for var x = range(v) {
+        if (x == 0) {
+            continue;
+        }
+        x = x + 1;
+    }
+}

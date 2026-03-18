@@ -1,0 +1,6 @@
+// continue missing its semicolon — parser error.
+fun bad(n : int) {
+    for var i = 0; i < n; ++i {
+        continue
+    }
+}

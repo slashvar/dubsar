@@ -1,0 +1,44 @@
+// quicksort.dub — in-place quicksort on vector<int>.
+//
+// Partitions around the last element (Lomuto scheme), then recurses on
+// the two sub-arrays.  The vector is passed by reference throughout so
+// all modifications are visible to the caller.
+
+// Swap v[i] and v[j] in place.
+fun swap(v : ref vector<int>, i : int, j : int) {
+    var tmp = v[i];
+    v[i] = v[j];
+    v[j] = tmp;
+}
+
+// Partition v[lo..hi] around pivot v[hi].
+// Moves every element <= pivot to the left of the pivot and returns
+// the final index of the pivot.
+fun partition(v : ref vector<int>, lo : int, hi : int) -> int {
+    var pivot = v[hi];
+    var i = lo - 1;
+    for var j = lo; j < hi; ++j {
+        if (v[j] <= pivot) {
+            i += 1;
+            swap(v, i, j);
+        }
+    }
+    swap(v, i + 1, hi);
+    return i + 1;
+}
+
+// Sort v[lo..hi] in ascending order.
+fun quicksort(v : ref vector<int>, lo : int, hi : int) {
+    if (lo < hi) {
+        var p = partition(v, lo, hi);
+        quicksort(v, lo, p - 1);
+        quicksort(v, p + 1, hi);
+    }
+}
+
+// Public entry point: sort the entire vector.
+fun sort(v : ref vector<int>) {
+    if (v.size() > 1) {
+        quicksort(v, 0, v.size() - 1);
+    }
+}
