@@ -1,0 +1,14 @@
+// Unary logical not operator.
+fun is_zero(n : int) -> int {
+    return !n;
+}
+
+fun negate_cond(a, b) {
+    var r = !(a && b);
+    var s = !(a || b);
+    return r;
+}
+
+fun toggle(flag : ref int) {
+    flag = !flag;
+}

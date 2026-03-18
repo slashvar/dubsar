@@ -1,0 +1,16 @@
+// Compound assignment operators: +=, -=, *=, /=.
+fun accum(n : int) -> int {
+    var r : int = 0;
+    r += n;
+    r -= 1;
+    r *= 2;
+    r /= 3;
+    return r;
+}
+
+fun update(x : ref int) {
+    x += 10;
+    x -= 5;
+    x *= 2;
+    x /= 4;
+}

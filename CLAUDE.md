@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**dubsar** is a compiler frontend (WiP) for a custom programming language also called "dubsar". It implements lexing, parsing, AST construction, and pretty-printing via a visitor pattern. The language supports functions, variables, structs with inheritance, interfaces, methods, control flow (if/else, for, for-range, continue), tuples, and type inference.
+**dubsar** is a compiler frontend (WiP) for a custom programming language also called "dubsar". It implements lexing, parsing, AST construction, and pretty-printing via a visitor pattern. The language supports functions, variables, structs with inheritance, interfaces, methods, control flow (if/else, for, for-range, continue, break), tuples, and type inference.
 
 ## Build System
 
@@ -32,8 +32,8 @@ The pipeline is: `.dub` source file → **Lexer** → **Parser** → **AST** →
 
 ### Source files (`src/`)
 
-- `lexer.l` — Flex lexer. Keywords: `fun`, `var`, `ref`, `return`, `for`, `type`, `struct`, `string`, `interface`, `if`, `else`, `continue`. Operators include arithmetic (including `%`), comparison, logical, pre/post increment/decrement, compound assignment (`+=`, `-=`, `*=`, `/=`), `::`, `->`, and indexing `[]`. Supports `//` and `/* */` comments. Includes the generated `parser.hpp` for `YYSTYPE` and token constants (no local union definition).
-- `parser.y` — Bison grammar. Produces a `program_node*` in the global `root` variable. Handles: function/method/type declarations at top level, `var` declarations, `for`/for-range loops, `if`/`else`, `return`, `continue`, compound statements, tuple declarations/assignments, and expressions. Uses `%code requires {}` to embed forward declarations (from `parser_types.h`) into the generated `parser.hpp`. Uses `%destructor` rules (one per union type tag) to delete raw pointers discarded during error recovery. The build uses `-Wextra -Werror`; generated Flex/Bison sources are compiled without `-Werror` to suppress unavoidable warnings.
+- `lexer.l` — Flex lexer. Keywords: `fun`, `var`, `ref`, `return`, `for`, `type`, `struct`, `string`, `interface`, `if`, `else`, `continue`, `break`. Operators include arithmetic (including `%`), comparison, logical, pre/post increment/decrement, compound assignment (`+=`, `-=`, `*=`, `/=`), `::`, `->`, and indexing `[]`. Supports `//` and `/* */` comments. Includes the generated `parser.hpp` for `YYSTYPE` and token constants (no local union definition).
+- `parser.y` — Bison grammar. Produces a `program_node*` in the global `root` variable. Handles: function/method/type declarations at top level, `var` declarations, `for`/for-range loops, `if`/`else`, `return`, `continue`, `break`, compound statements, tuple declarations/assignments, and expressions. Uses `%code requires {}` to embed forward declarations (from `parser_types.h`) into the generated `parser.hpp`. Uses `%destructor` rules (one per union type tag) to delete raw pointers discarded during error recovery. The build uses `-Wextra -Werror`; generated Flex/Bison sources are compiled without `-Werror` to suppress unavoidable warnings.
 - `ast.h` / `ast.cpp` — AST node class hierarchy. `program_node` is the root. All nodes implement `accept(visitor&)` for the visitor pattern. `ast.cpp` defines the global `root` variable.
 - `visitor.h` — Abstract `visitor` base class with `visit()` overloads for every node type.
 - `printer.h` / `printer.cpp` — `printer` concrete visitor for AST pretty-printing. Adds parentheses around all binary ops for round-trip stability (avoids any precedence ambiguity on re-parse).
@@ -57,7 +57,7 @@ ast_node
 ├── stmt_node
 │   ├── expr_stmt_node, var_decl_node, tuple_var_decl_node, tuple_assign_stmt_node
 │   ├── return_stmt_node, compound_stmt_node
-│   ├── for_stmt_node, for_range_stmt_node, continue_stmt_node
+│   ├── for_stmt_node, for_range_stmt_node, continue_stmt_node, break_stmt_node
 │   └── if_stmt_node
 │
 └── decl_node (extends stmt_node)
@@ -79,7 +79,7 @@ ast_node
 - **C-style for loop**: two forms (no parens, no semicolon before body): `for var i = 0; i < n; ++i { ... }` (var-decl init) and `for expr; expr; expr { ... }` (expression init, e.g. `for i = 1; i <= n; i = i + 1 { ... }`).
 - **Range-based for**: `for var item = range(collection) { ... }`
 - **If/else**: `if cond { ... }` / `if cond { ... } else { ... }`
-- **Continue**: `continue;`
+- **Continue / Break**: `continue;`, `break;`
 - **Generic types**: `vector<int>`, `vector<byte>`, etc. are supported in type positions (parameters, return types, variable declarations)
 - **Operators**: arithmetic (including `%`), comparison, logical (`&&`, `||`, `!`), compound assignment (`+=` `-=` `*=` `/=`), pre/post `++`/`--`, indexing `[]`
 - **Tuples**: returned as `return a, b;`, destructured as `var x, y = f();`
@@ -90,11 +90,13 @@ ast_node
 tests/
   run_test.py              — Python test runner
   fixtures/
-    valid/                 — 13 roundtrip test fixtures (parse→print→parse→compare)
-    invalid/               — 4 error test fixtures (expect non-zero exit)
+    valid/                 — 22 roundtrip test fixtures (parse→print→parse→compare)
+    invalid/               — 6 error test fixtures (expect non-zero exit)
 examples/
-  example.dub              — Core language features (also run as a 14th roundtrip test)
+  example.dub              — Core language features (also a roundtrip test)
   example2.dub             — Tuples, vectors, for-range
   interface.dub            — Interface syntax
   sieve.dub                — Sieve of Eratosthenes
+  collections.dub          — Structs, methods, generics, loops, tuples, compound assign
+  quicksort.dub            — In-place quicksort (also a roundtrip test)
 ```

@@ -1,0 +1,110 @@
+// collections.dub — combines structs, methods, interfaces, generics, loops,
+// tuples, compound assignment, break/continue, and qualified calls.
+
+type stack_node = struct {
+    value : int;
+    depth : int;
+}
+
+type stats = struct {
+    count : int;
+    total : int;
+    min_val : int;
+    max_val : int;
+}
+
+type summarizer = interface {
+    summarize() -> int;
+    reset();
+}
+
+fun stats::update(v : int) {
+    count += 1;
+    total += v;
+    if (v < min_val) {
+        min_val = v;
+    }
+    if (v > max_val) {
+        max_val = v;
+    }
+}
+
+fun stats::summarize() -> int {
+    if (count == 0) {
+        return 0;
+    }
+    return total / count;
+}
+
+fun stats::reset() {
+    count = 0;
+    total = 0;
+}
+
+// Compute min and max of a vector simultaneously via tuple return.
+fun bounds(v : vector<int>) -> int {
+    var lo : int = 0;
+    var hi : int = 0;
+    var first : int = 1;
+    for var x = range(v) {
+        if (first == 1) {
+            lo = x;
+            hi = x;
+            first = 0;
+            continue;
+        }
+        if (x < lo) {
+            lo = x;
+        }
+        if (x > hi) {
+            hi = x;
+        }
+    }
+    return lo, hi;
+}
+
+// Find first index where predicate holds; return -1 if not found.
+fun find_first(v : vector<int>, target : int) -> int {
+    for var i = 0; i < v.size(); ++i {
+        if (v[i] == target) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+// Partition: count elements below and above a pivot.
+fun partition_count(v : vector<int>, pivot : int) -> int {
+    var below : int = 0;
+    var above : int = 0;
+    for var x = range(v) {
+        if (x == pivot) {
+            continue;
+        }
+        if (x < pivot) {
+            below += 1;
+        } else {
+            above += 1;
+        }
+    }
+    return below, above;
+}
+
+// Nested loop: count pairs (i,j) with i < j and v[i] > v[j] (inversions).
+fun count_inversions(v : vector<int>) -> int {
+    var inv : int = 0;
+    for var i = 0; i < v.size(); ++i {
+        for var j = i + 1; j < v.size(); j++ {
+            if (v[i] > v[j]) {
+                inv += 1;
+            }
+        }
+    }
+    return inv;
+}
+
+// Use qualified call for I/O.
+fun report(label : string, value : int) {
+    sys::print(label);
+    sys::print(value);
+}

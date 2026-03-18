@@ -1,0 +1,17 @@
+// Tuple returns with typed parameters and destructuring.
+fun divide(a : int, b : int) -> int {
+    return a / b, a % b;
+}
+
+fun minmax(a : int, b : int) -> int {
+    if (a < b) {
+        return a, b;
+    }
+    return b, a;
+}
+
+fun use_tuples(n : int) {
+    var q, r = divide(n, 3);
+    var lo, hi = minmax(n, 0);
+    q, r = minmax(lo, hi);
+}

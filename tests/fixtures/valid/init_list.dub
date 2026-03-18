@@ -1,0 +1,10 @@
+// Init-list variable declarations.
+fun make_vec() -> vector<int> {
+    var v : vector<int> = {};
+    return v;
+}
+
+fun make_bytes() -> vector<byte> {
+    var buf : vector<byte> = {};
+    return buf;
+}

@@ -1,0 +1,15 @@
+// Postfix increment and decrement operators.
+fun count_down(n : int) -> int {
+    var i : int = n;
+    i--;
+    i--;
+    return i;
+}
+
+fun count_up(n : int) -> int {
+    var i : int = 0;
+    for var j = 0; j < n; j++ {
+        i++;
+    }
+    return i;
+}
