@@ -32,9 +32,9 @@ void yyerror(const char* s);
 %union {
     int intval;
     std::string* stringval;
-    ASTNode* node;
-    std::vector<ASTNode*>* nodevec;
-    std::vector<ParamNode*>* paramvec;
+    ast_node* node;
+    std::vector<ast_node*>* nodevec;
+    std::vector<param_node*>* paramvec;
     std::vector<std::string*>* namevec;
 }
 
@@ -84,12 +84,12 @@ void yyerror(const char* s);
 program
     : stmt_list_opt
         {
-            root = std::make_unique<ProgramNode>();
-            auto list = std::unique_ptr<std::vector<ASTNode*>>(
-                static_cast<std::vector<ASTNode*>*>($1));
+            root = std::make_unique<program_node>();
+            auto list = std::unique_ptr<std::vector<ast_node*>>(
+                static_cast<std::vector<ast_node*>*>($1));
             if (list) {
                 for (auto* n : *list) {
-                    root->add(static_cast<DeclNode*>(n));
+                    root->add(static_cast<decl_node*>(n));
                 }
             }
             // Ownership is held by the global 'root'; set $$ to nullptr so
@@ -100,13 +100,13 @@ program
 
 stmt_list_opt
     : stmt_list
-    | /* empty */ { $$ = new std::vector<ASTNode*>(); }
+    | /* empty */ { $$ = new std::vector<ast_node*>(); }
     ;
 
 stmt_list
     : stmt
         {
-            $$ = new std::vector<ASTNode*>();
+            $$ = new std::vector<ast_node*>();
             if ($1) $$->push_back($1);
         }
     | stmt_list stmt
@@ -128,9 +128,9 @@ stmt
     | tuple_assign_stmt
     | expr ';'
         {
-            // Wrap in ExprStmtNode to give the expression a proper StmtNode
-            // type, avoiding an undefined ExprNode* -> StmtNode* cast.
-            $$ = new ExprStmtNode(static_cast<ExprNode*>($1));
+            // Wrap in expr_stmt_node to give the expression a proper stmt_node
+            // type, avoiding an undefined expr_node* -> stmt_node* cast.
+            $$ = new expr_stmt_node(static_cast<expr_node*>($1));
         }
     | compound_stmt
     ;
@@ -146,10 +146,10 @@ func_decl
     : FUN IDENTIFIER '(' param_list_opt ')' compound_stmt
         {
             auto name = std::unique_ptr<std::string>($2);
-            auto* node = new FuncDeclNode(
-                std::move(*name), std::string{}, static_cast<StmtNode*>($6));
-            auto params = std::unique_ptr<std::vector<ParamNode*>>(
-                static_cast<std::vector<ParamNode*>*>($4));
+            auto* node = new func_decl_node(
+                std::move(*name), std::string{}, static_cast<stmt_node*>($6));
+            auto params = std::unique_ptr<std::vector<param_node*>>(
+                static_cast<std::vector<param_node*>*>($4));
             for (auto* p : *params) node->params.emplace_back(p);
             $$ = node;
         }
@@ -157,10 +157,10 @@ func_decl
         {
             auto name    = std::unique_ptr<std::string>($2);
             auto retType = std::unique_ptr<std::string>($7);
-            auto* node = new FuncDeclNode(
-                std::move(*name), std::move(*retType), static_cast<StmtNode*>($8));
-            auto params = std::unique_ptr<std::vector<ParamNode*>>(
-                static_cast<std::vector<ParamNode*>*>($4));
+            auto* node = new func_decl_node(
+                std::move(*name), std::move(*retType), static_cast<stmt_node*>($8));
+            auto params = std::unique_ptr<std::vector<param_node*>>(
+                static_cast<std::vector<param_node*>*>($4));
             for (auto* p : *params) node->params.emplace_back(p);
             $$ = node;
         }
@@ -170,38 +170,38 @@ type_decl
     : TYPE IDENTIFIER '=' struct_type
         {
             auto name = std::unique_ptr<std::string>($2);
-            $$ = new TypeDeclNode(std::move(*name),
-                                  static_cast<TypeBodyNode*>($4));
+            $$ = new type_decl_node(std::move(*name),
+                                    static_cast<type_body_node*>($4));
         }
     | TYPE IDENTIFIER '=' interface_type
         {
             auto name = std::unique_ptr<std::string>($2);
-            $$ = new TypeDeclNode(std::move(*name),
-                                  static_cast<TypeBodyNode*>($4));
+            $$ = new type_decl_node(std::move(*name),
+                                    static_cast<type_body_node*>($4));
         }
     ;
 
 struct_type
     : STRUCT '{' field_list_opt '}'
         {
-            auto* node = new StructTypeNode("", "");
-            auto list = std::unique_ptr<std::vector<ASTNode*>>(
-                static_cast<std::vector<ASTNode*>*>($3));
+            auto* node = new struct_type_node("", "");
+            auto list = std::unique_ptr<std::vector<ast_node*>>(
+                static_cast<std::vector<ast_node*>*>($3));
             if (list) {
                 for (auto* n : *list)
-                    node->addField(static_cast<StructFieldNode*>(n));
+                    node->add_field(static_cast<struct_field_node*>(n));
             }
             $$ = node;
         }
     | STRUCT ':' IDENTIFIER '{' field_list_opt '}'
         {
             auto parent = std::unique_ptr<std::string>($3);
-            auto* node = new StructTypeNode("", std::move(*parent));
-            auto list = std::unique_ptr<std::vector<ASTNode*>>(
-                static_cast<std::vector<ASTNode*>*>($5));
+            auto* node = new struct_type_node("", std::move(*parent));
+            auto list = std::unique_ptr<std::vector<ast_node*>>(
+                static_cast<std::vector<ast_node*>*>($5));
             if (list) {
                 for (auto* n : *list)
-                    node->addField(static_cast<StructFieldNode*>(n));
+                    node->add_field(static_cast<struct_field_node*>(n));
             }
             $$ = node;
         }
@@ -210,12 +210,12 @@ struct_type
 interface_type
     : INTERFACE '{' interface_method_list_opt '}'
         {
-            auto* node = new InterfaceTypeNode();
-            auto list = std::unique_ptr<std::vector<ASTNode*>>(
-                static_cast<std::vector<ASTNode*>*>($3));
+            auto* node = new interface_type_node();
+            auto list = std::unique_ptr<std::vector<ast_node*>>(
+                static_cast<std::vector<ast_node*>*>($3));
             if (list) {
                 for (auto* n : *list)
-                    node->addMethod(static_cast<InterfaceMethodNode*>(n));
+                    node->add_method(static_cast<interface_method_node*>(n));
             }
             $$ = node;
         }
@@ -223,13 +223,13 @@ interface_type
 
 interface_method_list_opt
     : interface_method_list
-    | /* empty */ { $$ = new std::vector<ASTNode*>(); }
+    | /* empty */ { $$ = new std::vector<ast_node*>(); }
     ;
 
 interface_method_list
     : interface_method
         {
-            $$ = new std::vector<ASTNode*>();
+            $$ = new std::vector<ast_node*>();
             $$->push_back($1);
         }
     | interface_method_list interface_method
@@ -243,9 +243,9 @@ interface_method
     : method_name '(' param_list_opt ')' ';'
         {
             auto mname = std::unique_ptr<std::string>($1);
-            auto* node = new InterfaceMethodNode(std::move(*mname), std::string{});
-            auto params = std::unique_ptr<std::vector<ParamNode*>>(
-                static_cast<std::vector<ParamNode*>*>($3));
+            auto* node = new interface_method_node(std::move(*mname), std::string{});
+            auto params = std::unique_ptr<std::vector<param_node*>>(
+                static_cast<std::vector<param_node*>*>($3));
             if (params) {
                 for (auto* p : *params) node->params.emplace_back(p);
             }
@@ -255,9 +255,9 @@ interface_method
         {
             auto mname   = std::unique_ptr<std::string>($1);
             auto retType = std::unique_ptr<std::string>($6);
-            auto* node = new InterfaceMethodNode(std::move(*mname), std::move(*retType));
-            auto params = std::unique_ptr<std::vector<ParamNode*>>(
-                static_cast<std::vector<ParamNode*>*>($3));
+            auto* node = new interface_method_node(std::move(*mname), std::move(*retType));
+            auto params = std::unique_ptr<std::vector<param_node*>>(
+                static_cast<std::vector<param_node*>*>($3));
             if (params) {
                 for (auto* p : *params) node->params.emplace_back(p);
             }
@@ -272,7 +272,7 @@ method_name
 
 field_list_opt
     : field_list
-    | /* empty */ { $$ = new std::vector<ASTNode*>(); }
+    | /* empty */ { $$ = new std::vector<ast_node*>(); }
     ;
 
 field_list
@@ -280,17 +280,17 @@ field_list
         {
             auto fieldName = std::unique_ptr<std::string>($1);
             auto fieldType = std::unique_ptr<std::string>($3);
-            $$ = new std::vector<ASTNode*>();
-            $$->push_back(new StructFieldNode(std::move(*fieldName),
-                                              std::move(*fieldType)));
+            $$ = new std::vector<ast_node*>();
+            $$->push_back(new struct_field_node(std::move(*fieldName),
+                                                std::move(*fieldType)));
         }
     | field_list IDENTIFIER ':' type_spec ';'
         {
             auto fieldName = std::unique_ptr<std::string>($2);
             auto fieldType = std::unique_ptr<std::string>($4);
             $$ = $1;
-            $$->push_back(new StructFieldNode(std::move(*fieldName),
-                                              std::move(*fieldType)));
+            $$->push_back(new struct_field_node(std::move(*fieldName),
+                                                std::move(*fieldType)));
         }
     ;
 
@@ -299,11 +299,11 @@ method_decl
         {
             auto typeName   = std::unique_ptr<std::string>($2);
             auto methodName = std::unique_ptr<std::string>($4);
-            auto* node = new MethodDeclNode(
+            auto* node = new method_decl_node(
                 std::move(*typeName), std::move(*methodName),
-                std::string{}, static_cast<StmtNode*>($8));
-            auto params = std::unique_ptr<std::vector<ParamNode*>>(
-                static_cast<std::vector<ParamNode*>*>($6));
+                std::string{}, static_cast<stmt_node*>($8));
+            auto params = std::unique_ptr<std::vector<param_node*>>(
+                static_cast<std::vector<param_node*>*>($6));
             for (auto* p : *params) node->params.emplace_back(p);
             $$ = node;
         }
@@ -312,11 +312,11 @@ method_decl
             auto typeName   = std::unique_ptr<std::string>($2);
             auto methodName = std::unique_ptr<std::string>($4);
             auto retType    = std::unique_ptr<std::string>($9);
-            auto* node = new MethodDeclNode(
+            auto* node = new method_decl_node(
                 std::move(*typeName), std::move(*methodName),
-                std::move(*retType), static_cast<StmtNode*>($10));
-            auto params = std::unique_ptr<std::vector<ParamNode*>>(
-                static_cast<std::vector<ParamNode*>*>($6));
+                std::move(*retType), static_cast<stmt_node*>($10));
+            auto params = std::unique_ptr<std::vector<param_node*>>(
+                static_cast<std::vector<param_node*>*>($6));
             for (auto* p : *params) node->params.emplace_back(p);
             $$ = node;
         }
@@ -324,75 +324,75 @@ method_decl
 
 param_list_opt
     : param_list
-    | /* empty */ { $$ = new std::vector<ParamNode*>(); }
+    | /* empty */ { $$ = new std::vector<param_node*>(); }
     ;
 
 param_list
     : IDENTIFIER
         {
             auto name = std::unique_ptr<std::string>($1);
-            $$ = new std::vector<ParamNode*>();
-            $$->push_back(new ParamNode(std::move(*name), "", false));
+            $$ = new std::vector<param_node*>();
+            $$->push_back(new param_node(std::move(*name), "", false));
         }
     | IDENTIFIER ':' REF
         {
             auto name = std::unique_ptr<std::string>($1);
-            $$ = new std::vector<ParamNode*>();
-            $$->push_back(new ParamNode(std::move(*name), "", true));
+            $$ = new std::vector<param_node*>();
+            $$->push_back(new param_node(std::move(*name), "", true));
         }
     | IDENTIFIER ':' type_spec
         {
             auto name = std::unique_ptr<std::string>($1);
             auto type = std::unique_ptr<std::string>($3);
-            $$ = new std::vector<ParamNode*>();
-            $$->push_back(new ParamNode(std::move(*name), std::move(*type), false));
+            $$ = new std::vector<param_node*>();
+            $$->push_back(new param_node(std::move(*name), std::move(*type), false));
         }
     | IDENTIFIER ':' type_spec REF
         {
             auto name = std::unique_ptr<std::string>($1);
             auto type = std::unique_ptr<std::string>($3);
-            $$ = new std::vector<ParamNode*>();
-            $$->push_back(new ParamNode(std::move(*name), std::move(*type), true));
+            $$ = new std::vector<param_node*>();
+            $$->push_back(new param_node(std::move(*name), std::move(*type), true));
         }
     | IDENTIFIER ':' REF type_spec
         {
             auto name = std::unique_ptr<std::string>($1);
             auto type = std::unique_ptr<std::string>($4);
-            $$ = new std::vector<ParamNode*>();
-            $$->push_back(new ParamNode(std::move(*name), std::move(*type), true));
+            $$ = new std::vector<param_node*>();
+            $$->push_back(new param_node(std::move(*name), std::move(*type), true));
         }
     | param_list ',' IDENTIFIER
         {
             auto name = std::unique_ptr<std::string>($3);
             $$ = $1;
-            $$->push_back(new ParamNode(std::move(*name), "", false));
+            $$->push_back(new param_node(std::move(*name), "", false));
         }
     | param_list ',' IDENTIFIER ':' REF
         {
             auto name = std::unique_ptr<std::string>($3);
             $$ = $1;
-            $$->push_back(new ParamNode(std::move(*name), "", true));
+            $$->push_back(new param_node(std::move(*name), "", true));
         }
     | param_list ',' IDENTIFIER ':' type_spec
         {
             auto name = std::unique_ptr<std::string>($3);
             auto type = std::unique_ptr<std::string>($5);
             $$ = $1;
-            $$->push_back(new ParamNode(std::move(*name), std::move(*type), false));
+            $$->push_back(new param_node(std::move(*name), std::move(*type), false));
         }
     | param_list ',' IDENTIFIER ':' type_spec REF
         {
             auto name = std::unique_ptr<std::string>($3);
             auto type = std::unique_ptr<std::string>($5);
             $$ = $1;
-            $$->push_back(new ParamNode(std::move(*name), std::move(*type), true));
+            $$->push_back(new param_node(std::move(*name), std::move(*type), true));
         }
     | param_list ',' IDENTIFIER ':' REF type_spec
         {
             auto name = std::unique_ptr<std::string>($3);
             auto type = std::unique_ptr<std::string>($6);
             $$ = $1;
-            $$->push_back(new ParamNode(std::move(*name), std::move(*type), true));
+            $$->push_back(new param_node(std::move(*name), std::move(*type), true));
         }
     ;
 
@@ -416,82 +416,82 @@ var_decl
     : VAR IDENTIFIER '=' expr ';'
         {
             auto name = std::unique_ptr<std::string>($2);
-            $$ = new VarDeclNode(std::move(*name), "",
-                                 static_cast<ExprNode*>($4));
+            $$ = new var_decl_node(std::move(*name), "",
+                                   static_cast<expr_node*>($4));
         }
     | VAR IDENTIFIER ':' type_spec '=' expr ';'
         {
             auto name = std::unique_ptr<std::string>($2);
             auto type = std::unique_ptr<std::string>($4);
-            $$ = new VarDeclNode(std::move(*name), std::move(*type),
-                                 static_cast<ExprNode*>($6));
+            $$ = new var_decl_node(std::move(*name), std::move(*type),
+                                   static_cast<expr_node*>($6));
         }
     | VAR IDENTIFIER ':' type_spec '=' '{' arg_list_opt '}' ';'
         {
             auto name = std::unique_ptr<std::string>($2);
             auto type = std::unique_ptr<std::string>($4);
-            auto* node = new InitListExprNode();
-            auto args = std::unique_ptr<std::vector<ASTNode*>>(
-                static_cast<std::vector<ASTNode*>*>($7));
+            auto* node = new init_list_expr_node();
+            auto args = std::unique_ptr<std::vector<ast_node*>>(
+                static_cast<std::vector<ast_node*>*>($7));
             if (args) {
-                for (auto* a : *args) node->args.emplace_back(static_cast<ExprNode*>(a));
+                for (auto* a : *args) node->args.emplace_back(static_cast<expr_node*>(a));
             }
-            $$ = new VarDeclNode(std::move(*name), std::move(*type), node);
+            $$ = new var_decl_node(std::move(*name), std::move(*type), node);
         }
     ;
 
 for_stmt
     : FOR var_decl expr ';' expr compound_stmt
         {
-            $$ = new ForStmtNode(
-                static_cast<StmtNode*>($2),
-                static_cast<ExprNode*>($3),
-                static_cast<ExprNode*>($5),
-                static_cast<StmtNode*>($6));
+            $$ = new for_stmt_node(
+                static_cast<stmt_node*>($2),
+                static_cast<expr_node*>($3),
+                static_cast<expr_node*>($5),
+                static_cast<stmt_node*>($6));
         }
     | FOR expr ';' expr ';' expr compound_stmt
         {
-            $$ = new ForStmtNode(
-                new ExprStmtNode(static_cast<ExprNode*>($2)),
-                static_cast<ExprNode*>($4),
-                static_cast<ExprNode*>($6),
-                static_cast<StmtNode*>($7));
+            $$ = new for_stmt_node(
+                new expr_stmt_node(static_cast<expr_node*>($2)),
+                static_cast<expr_node*>($4),
+                static_cast<expr_node*>($6),
+                static_cast<stmt_node*>($7));
         }
     ;
 
 return_stmt
     : RETURN expr ';'
-        { $$ = new ReturnStmtNode(static_cast<ExprNode*>($2)); }
+        { $$ = new return_stmt_node(static_cast<expr_node*>($2)); }
     | RETURN tuple_expr ';'
-        { $$ = new ReturnStmtNode(static_cast<ExprNode*>($2)); }
+        { $$ = new return_stmt_node(static_cast<expr_node*>($2)); }
     ;
 
 if_stmt
     : IF expr compound_stmt
         {
-            $$ = new IfStmtNode(static_cast<ExprNode*>($2),
-                                static_cast<StmtNode*>($3), nullptr);
+            $$ = new if_stmt_node(static_cast<expr_node*>($2),
+                                  static_cast<stmt_node*>($3), nullptr);
         }
     | IF expr compound_stmt ELSE compound_stmt
         {
-            $$ = new IfStmtNode(static_cast<ExprNode*>($2),
-                                static_cast<StmtNode*>($3),
-                                static_cast<StmtNode*>($5));
+            $$ = new if_stmt_node(static_cast<expr_node*>($2),
+                                  static_cast<stmt_node*>($3),
+                                  static_cast<stmt_node*>($5));
         }
     ;
 
 continue_stmt
     : CONTINUE ';'
-        { $$ = new ContinueStmtNode(); }
+        { $$ = new continue_stmt_node(); }
     ;
 
 for_range_stmt
     : FOR VAR IDENTIFIER '=' expr compound_stmt
         {
             auto name = std::unique_ptr<std::string>($3);
-            $$ = new ForRangeStmtNode(std::move(*name),
-                                      static_cast<ExprNode*>($5),
-                                      static_cast<StmtNode*>($6));
+            $$ = new for_range_stmt_node(std::move(*name),
+                                         static_cast<expr_node*>($5),
+                                         static_cast<stmt_node*>($6));
         }
     ;
 
@@ -515,8 +515,8 @@ tuple_var_decl
             auto names_raw = std::unique_ptr<std::vector<std::string*>>($2);
             std::vector<std::string> names;
             for (auto* s : *names_raw) { names.push_back(std::move(*s)); delete s; }
-            $$ = new TupleVarDeclNode(std::move(names),
-                                      static_cast<ExprNode*>($4));
+            $$ = new tuple_var_decl_node(std::move(names),
+                                         static_cast<expr_node*>($4));
         }
     ;
 
@@ -526,31 +526,31 @@ tuple_assign_stmt
             auto names_raw = std::unique_ptr<std::vector<std::string*>>($1);
             std::vector<std::string> names;
             for (auto* s : *names_raw) { names.push_back(std::move(*s)); delete s; }
-            $$ = new TupleAssignStmtNode(std::move(names),
-                                         static_cast<ExprNode*>($3));
+            $$ = new tuple_assign_stmt_node(std::move(names),
+                                            static_cast<expr_node*>($3));
         }
     | name_list '=' expr ';'
         {
             auto names_raw = std::unique_ptr<std::vector<std::string*>>($1);
             std::vector<std::string> names;
             for (auto* s : *names_raw) { names.push_back(std::move(*s)); delete s; }
-            $$ = new TupleAssignStmtNode(std::move(names),
-                                         static_cast<ExprNode*>($3));
+            $$ = new tuple_assign_stmt_node(std::move(names),
+                                            static_cast<expr_node*>($3));
         }
     ;
 
 tuple_expr
     : expr ',' expr
         {
-            auto* node = new TupleExprNode();
-            node->add(static_cast<ExprNode*>($1));
-            node->add(static_cast<ExprNode*>($3));
+            auto* node = new tuple_expr_node();
+            node->add(static_cast<expr_node*>($1));
+            node->add(static_cast<expr_node*>($3));
             $$ = node;
         }
     | tuple_expr ',' expr
         {
-            auto* node = static_cast<TupleExprNode*>($1);
-            node->add(static_cast<ExprNode*>($3));
+            auto* node = static_cast<tuple_expr_node*>($1);
+            node->add(static_cast<expr_node*>($3));
             $$ = node;
         }
     ;
@@ -558,12 +558,12 @@ tuple_expr
 compound_stmt
     : '{' stmt_list_opt '}'
         {
-            auto* node = new CompoundStmtNode();
-            auto list = std::unique_ptr<std::vector<ASTNode*>>(
-                static_cast<std::vector<ASTNode*>*>($2));
+            auto* node = new compound_stmt_node();
+            auto list = std::unique_ptr<std::vector<ast_node*>>(
+                static_cast<std::vector<ast_node*>*>($2));
             if (list) {
                 for (auto* n : *list)
-                    node->add(static_cast<StmtNode*>(n));
+                    node->add(static_cast<stmt_node*>(n));
             }
             $$ = node;
         }
@@ -571,87 +571,87 @@ compound_stmt
 
 expr
     : NUMBER
-        { $$ = new NumberNode($1); }
+        { $$ = new number_node($1); }
     | STRING_LITERAL
         {
             auto s = std::unique_ptr<std::string>($1);
-            $$ = new StringNode(std::move(*s));
+            $$ = new string_node(std::move(*s));
         }
     | IDENTIFIER
         {
             auto id = std::unique_ptr<std::string>($1);
-            $$ = new IdentifierNode(std::move(*id));
+            $$ = new identifier_node(std::move(*id));
         }
     | expr '+' expr
-        { $$ = new BinaryOpNode("+", static_cast<ExprNode*>($1), static_cast<ExprNode*>($3)); }
+        { $$ = new binary_op_node("+", static_cast<expr_node*>($1), static_cast<expr_node*>($3)); }
     | expr '-' expr
-        { $$ = new BinaryOpNode("-", static_cast<ExprNode*>($1), static_cast<ExprNode*>($3)); }
+        { $$ = new binary_op_node("-", static_cast<expr_node*>($1), static_cast<expr_node*>($3)); }
     | expr '*' expr
-        { $$ = new BinaryOpNode("*", static_cast<ExprNode*>($1), static_cast<ExprNode*>($3)); }
+        { $$ = new binary_op_node("*", static_cast<expr_node*>($1), static_cast<expr_node*>($3)); }
     | expr '/' expr
-        { $$ = new BinaryOpNode("/", static_cast<ExprNode*>($1), static_cast<ExprNode*>($3)); }
+        { $$ = new binary_op_node("/", static_cast<expr_node*>($1), static_cast<expr_node*>($3)); }
     | expr LE expr
-        { $$ = new BinaryOpNode("<=", static_cast<ExprNode*>($1), static_cast<ExprNode*>($3)); }
+        { $$ = new binary_op_node("<=", static_cast<expr_node*>($1), static_cast<expr_node*>($3)); }
     | expr GE expr
-        { $$ = new BinaryOpNode(">=", static_cast<ExprNode*>($1), static_cast<ExprNode*>($3)); }
+        { $$ = new binary_op_node(">=", static_cast<expr_node*>($1), static_cast<expr_node*>($3)); }
     | expr '<' expr
-        { $$ = new BinaryOpNode("<", static_cast<ExprNode*>($1), static_cast<ExprNode*>($3)); }
+        { $$ = new binary_op_node("<", static_cast<expr_node*>($1), static_cast<expr_node*>($3)); }
     | expr '>' expr
-        { $$ = new BinaryOpNode(">", static_cast<ExprNode*>($1), static_cast<ExprNode*>($3)); }
+        { $$ = new binary_op_node(">", static_cast<expr_node*>($1), static_cast<expr_node*>($3)); }
     | expr EQ expr
-        { $$ = new BinaryOpNode("==", static_cast<ExprNode*>($1), static_cast<ExprNode*>($3)); }
+        { $$ = new binary_op_node("==", static_cast<expr_node*>($1), static_cast<expr_node*>($3)); }
     | expr NE expr
-        { $$ = new BinaryOpNode("!=", static_cast<ExprNode*>($1), static_cast<ExprNode*>($3)); }
+        { $$ = new binary_op_node("!=", static_cast<expr_node*>($1), static_cast<expr_node*>($3)); }
     | expr AND expr
-        { $$ = new BinaryOpNode("&&", static_cast<ExprNode*>($1), static_cast<ExprNode*>($3)); }
+        { $$ = new binary_op_node("&&", static_cast<expr_node*>($1), static_cast<expr_node*>($3)); }
     | expr OR expr
-        { $$ = new BinaryOpNode("||", static_cast<ExprNode*>($1), static_cast<ExprNode*>($3)); }
+        { $$ = new binary_op_node("||", static_cast<expr_node*>($1), static_cast<expr_node*>($3)); }
     | expr '=' expr
-        { $$ = new AssignNode(static_cast<ExprNode*>($1), static_cast<ExprNode*>($3)); }
+        { $$ = new assign_node(static_cast<expr_node*>($1), static_cast<expr_node*>($3)); }
     | '!' expr
-        { $$ = new UnaryOpNode("!", static_cast<ExprNode*>($2)); }
+        { $$ = new unary_op_node("!", static_cast<expr_node*>($2)); }
     | INC expr
-        { $$ = new UnaryOpNode("++", static_cast<ExprNode*>($2)); }
+        { $$ = new unary_op_node("++", static_cast<expr_node*>($2)); }
     | DEC expr
-        { $$ = new UnaryOpNode("--", static_cast<ExprNode*>($2)); }
+        { $$ = new unary_op_node("--", static_cast<expr_node*>($2)); }
     | expr INC
-        { $$ = new UnaryOpNode("post++", static_cast<ExprNode*>($1)); }
+        { $$ = new unary_op_node("post++", static_cast<expr_node*>($1)); }
     | expr DEC
-        { $$ = new UnaryOpNode("post--", static_cast<ExprNode*>($1)); }
+        { $$ = new unary_op_node("post--", static_cast<expr_node*>($1)); }
     | '(' expr ')'
         { $$ = $2; }
     | expr '%' expr
-        { $$ = new BinaryOpNode("%", static_cast<ExprNode*>($1), static_cast<ExprNode*>($3)); }
+        { $$ = new binary_op_node("%", static_cast<expr_node*>($1), static_cast<expr_node*>($3)); }
     | expr '[' expr ']'
-        { $$ = new IndexNode(static_cast<ExprNode*>($1), static_cast<ExprNode*>($3)); }
+        { $$ = new index_node(static_cast<expr_node*>($1), static_cast<expr_node*>($3)); }
     | expr PLUS_EQ expr
-        { $$ = new CompoundAssignNode("+=", static_cast<ExprNode*>($1), static_cast<ExprNode*>($3)); }
+        { $$ = new compound_assign_node("+=", static_cast<expr_node*>($1), static_cast<expr_node*>($3)); }
     | expr MINUS_EQ expr
-        { $$ = new CompoundAssignNode("-=", static_cast<ExprNode*>($1), static_cast<ExprNode*>($3)); }
+        { $$ = new compound_assign_node("-=", static_cast<expr_node*>($1), static_cast<expr_node*>($3)); }
     | expr STAR_EQ expr
-        { $$ = new CompoundAssignNode("*=", static_cast<ExprNode*>($1), static_cast<ExprNode*>($3)); }
+        { $$ = new compound_assign_node("*=", static_cast<expr_node*>($1), static_cast<expr_node*>($3)); }
     | expr SLASH_EQ expr
-        { $$ = new CompoundAssignNode("/=", static_cast<ExprNode*>($1), static_cast<ExprNode*>($3)); }
+        { $$ = new compound_assign_node("/=", static_cast<expr_node*>($1), static_cast<expr_node*>($3)); }
     | IDENTIFIER '(' arg_list_opt ')'
         {
             auto name = std::unique_ptr<std::string>($1);
-            auto* node = new CallNode(std::move(*name));
-            auto args = std::unique_ptr<std::vector<ASTNode*>>(
-                static_cast<std::vector<ASTNode*>*>($3));
+            auto* node = new call_node(std::move(*name));
+            auto args = std::unique_ptr<std::vector<ast_node*>>(
+                static_cast<std::vector<ast_node*>*>($3));
             if (args) {
-                for (auto* a : *args) node->args.emplace_back(static_cast<ExprNode*>(a));
+                for (auto* a : *args) node->args.emplace_back(static_cast<expr_node*>(a));
             }
             $$ = node;
         }
     | expr '.' method_name '(' arg_list_opt ')'
         {
             auto mname = std::unique_ptr<std::string>($3);
-            auto* node = new MemberCallNode(
-                static_cast<ExprNode*>($1), std::move(*mname));
-            auto args = std::unique_ptr<std::vector<ASTNode*>>(
-                static_cast<std::vector<ASTNode*>*>($5));
+            auto* node = new member_call_node(
+                static_cast<expr_node*>($1), std::move(*mname));
+            auto args = std::unique_ptr<std::vector<ast_node*>>(
+                static_cast<std::vector<ast_node*>*>($5));
             if (args) {
-                for (auto* a : *args) node->args.emplace_back(static_cast<ExprNode*>(a));
+                for (auto* a : *args) node->args.emplace_back(static_cast<expr_node*>(a));
             }
             $$ = node;
         }
@@ -659,11 +659,11 @@ expr
         {
             auto qual  = std::unique_ptr<std::string>($1);
             auto mname = std::unique_ptr<std::string>($3);
-            auto* node = new QualifiedCallNode(std::move(*qual), std::move(*mname));
-            auto args = std::unique_ptr<std::vector<ASTNode*>>(
-                static_cast<std::vector<ASTNode*>*>($5));
+            auto* node = new qualified_call_node(std::move(*qual), std::move(*mname));
+            auto args = std::unique_ptr<std::vector<ast_node*>>(
+                static_cast<std::vector<ast_node*>*>($5));
             if (args) {
-                for (auto* a : *args) node->args.emplace_back(static_cast<ExprNode*>(a));
+                for (auto* a : *args) node->args.emplace_back(static_cast<expr_node*>(a));
             }
             $$ = node;
         }
@@ -671,13 +671,13 @@ expr
 
 arg_list_opt
     : arg_list
-    | /* empty */ { $$ = new std::vector<ASTNode*>(); }
+    | /* empty */ { $$ = new std::vector<ast_node*>(); }
     ;
 
 arg_list
     : expr
         {
-            $$ = new std::vector<ASTNode*>();
+            $$ = new std::vector<ast_node*>();
             $$->push_back($1);
         }
     | arg_list ',' expr

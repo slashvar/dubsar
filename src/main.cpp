@@ -20,10 +20,10 @@ extern void yy_delete_buffer(
     yy_buffer_state*);  // NOLINT(cppcoreguidelines-owning-memory,readability-identifier-naming)
 
 namespace {
-struct LexBufferDeleter {
+struct lex_buffer_deleter {
     void operator()(yy_buffer_state* b) const noexcept { yy_delete_buffer(b); }
 };
-using UniqueLexBuffer = std::unique_ptr<yy_buffer_state, LexBufferDeleter>;
+using unique_lex_buffer = std::unique_ptr<yy_buffer_state, lex_buffer_deleter>;
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -32,16 +32,16 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    const std::filesystem::path inputPath{argv[1]};
+    const std::filesystem::path input_path{argv[1]};
 
-    std::ifstream file{inputPath};
+    std::ifstream file{input_path};
     if (!file) {
-        std::cerr << std::format("Error: Cannot open file '{}'\n", inputPath.string());
+        std::cerr << std::format("Error: Cannot open file '{}'\n", input_path.string());
         return 1;
     }
 
     const std::string content{std::istreambuf_iterator<char>(file), {}};
-    const UniqueLexBuffer buffer{yy_scan_string(content.c_str())};
+    const unique_lex_buffer buffer{yy_scan_string(content.c_str())};
 
     if (const int result = yyparse(); result != 0) {
         std::cerr << std::format("Parse failed with error code {}\n", result);
@@ -49,8 +49,8 @@ int main(int argc, char** argv) {
     }
 
     if (root) {
-        Printer printer{std::cout};
-        root->accept(printer);
+        printer p{std::cout};
+        root->accept(p);
         std::cout << '\n';
     }
 

@@ -15,7 +15,7 @@ Currently implements lexing, parsing, AST construction, and pretty-printing.
 - Methods declared as `fun TypeName::methodName()`
 - Member calls (`obj.method(args)`) and qualified calls (`ns::func(args)`)
 - Generic types (`vector<int>`, `vector<byte>`, etc.)
-- C-style `for` loops: `for var i = 0; i < n; ++i { ... }`
+- C-style `for` loops: `for var i = 0; i < n; ++i { ... }` and `for expr; expr; expr { ... }`
 - Range-based `for` loops: `for var item = range(collection) { ... }`
 - `if`/`else` statements
 - `continue`
