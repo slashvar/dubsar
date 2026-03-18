@@ -3,9 +3,16 @@ project('dubsar', ['cpp', 'c'],
     default_options: ['cpp_std=c++20']
 )
 
-# Find flex and bison
+# Find flex and bison.
+# Bison >= 3.0 is required for %destructor type-tag syntax.
+# On macOS the system Bison is 2.x; Homebrew installs a newer version as a
+# keg-only package, so we add its stable opt path to the search dirs.
 flex = find_program('flex')
-bison = find_program('bison')
+bison = find_program(
+    'bison',
+    dirs: ['/opt/homebrew/opt/bison/bin', '/usr/local/opt/bison/bin'],
+    version: '>= 3.0',
+)
 
 # Find clang compiler
 cxx = meson.get_compiler('cpp')

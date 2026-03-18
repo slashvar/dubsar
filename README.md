@@ -32,7 +32,7 @@ See `examples/` for sample source files.
 |------|-------|
 | Clang | Required (GCC is not supported) |
 | Flex | Lexer generation |
-| Bison | Parser generation |
+| Bison ≥ 3.0 | Parser generation (`%destructor` type-tag syntax requires Bison 3+; on macOS the system Bison is too old — `brew install bison`, Meson detects it automatically) |
 | Meson ≥ 1.0 | Build system |
 | Ninja | Build backend |
 | Python 3 | Test runner |

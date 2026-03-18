@@ -1,15 +1,17 @@
 # Generate parser from bison (output .cpp so meson uses C++ compiler)
 parser_cpp = custom_target('parser_cpp',
     output: 'parser.cpp',
-    command: ['/usr/bin/bison', '-d', '-o', '@OUTPUT@', '@INPUT@'],
+    command: [bison, '-d', '-o', '@OUTPUT@', '@INPUT@'],
     input: 'parser.y'
 )
 
 # Generate lexer from flex (output .cpp so meson uses C++ compiler)
+# Depends on parser_cpp because the generated lexer.cpp includes parser.hpp.
 lexer_cpp = custom_target('lexer_cpp',
     output: 'lexer.cpp',
-    command: ['/usr/bin/flex', '-o', '@OUTPUT@', '@INPUT@'],
-    input: 'lexer.l'
+    command: [flex, '-o', '@OUTPUT@', '@INPUT@'],
+    input: 'lexer.l',
+    depends: [parser_cpp]
 )
 
 # Generated sources are compiled without -Werror to silence warnings in
