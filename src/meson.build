@@ -53,6 +53,7 @@ valid_cases = [
     'interface',
     'example2',
     'for_expr_loop',
+    'method_params',
 ]
 
 foreach name : valid_cases

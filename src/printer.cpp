@@ -10,6 +10,14 @@
 void Printer::pad() const { out_ << std::string(indent_, ' '); }
 void Printer::pad(int extra) const { out_ << std::string(indent_ + extra, ' '); }
 
+void Printer::printParams(const std::vector<std::unique_ptr<ParamNode>>& params) {
+    for (bool first = true; const auto& p : params) {
+        if (!first) out_ << ", ";
+        p->accept(*this);
+        first = false;
+    }
+}
+
 // ── Expressions ───────────────────────────────────────────────────────────────
 
 void Printer::visit(const IdentifierNode& node) { out_ << node.name; }
@@ -110,12 +118,7 @@ void Printer::visit(const ParamNode& node) {
 
 void Printer::visit(const FuncDeclNode& node) {
     out_ << std::format("fun {}(", node.name);
-    // C++20 init-statement in range-for for comma separation.
-    for (bool first = true; const auto& p : node.params) {
-        if (!first) out_ << ", ";
-        p->accept(*this);
-        first = false;
-    }
+    printParams(node.params);
     out_ << ')';
     if (!node.returnType.empty()) out_ << std::format(" -> {}", node.returnType);
     out_ << ' ';
@@ -141,7 +144,9 @@ void Printer::visit(const StructTypeNode& node) {
 }
 
 void Printer::visit(const MethodDeclNode& node) {
-    out_ << std::format("fun {}::{}()", node.typeName, node.name);
+    out_ << std::format("fun {}::{}(", node.typeName, node.name);
+    printParams(node.params);
+    out_ << ')';
     if (!node.returnType.empty()) out_ << std::format(" -> {}", node.returnType);
     out_ << ' ';
     node.body->accept(*this);
@@ -167,11 +172,7 @@ void Printer::visit(const InterfaceTypeNode& node) {
 
 void Printer::visit(const InterfaceMethodNode& node) {
     out_ << node.name << '(';
-    for (bool first = true; const auto& p : node.params) {
-        if (!first) out_ << ", ";
-        p->accept(*this);
-        first = false;
-    }
+    printParams(node.params);
     out_ << ')';
     if (!node.returnType.empty()) out_ << std::format(" -> {}", node.returnType);
     out_ << ';';

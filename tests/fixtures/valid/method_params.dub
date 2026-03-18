@@ -1,0 +1,16 @@
+// Methods with parameters — all parameter forms.
+type counter = struct {
+    value : int;
+}
+
+fun counter::add(n : int) {
+    value = value + n;
+}
+
+fun counter::mul(n : int) -> int {
+    return value * n;
+}
+
+fun counter::addTwo(a : int, b : int) {
+    value = value + a + b;
+}

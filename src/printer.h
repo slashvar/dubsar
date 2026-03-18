@@ -1,7 +1,9 @@
 #ifndef PRINTER_H
 #define PRINTER_H
 
+#include <memory>
 #include <ostream>
+#include <vector>
 
 #include "visitor.h"
 
@@ -53,6 +55,8 @@ private:
     void pad() const;
     // Emit `indent_ + extra` spaces without changing indent_.
     void pad(int extra) const;
+    // Emit a comma-separated parameter list (no surrounding parens).
+    void printParams(const std::vector<std::unique_ptr<ParamNode>>& params);
 };
 
 #endif  // PRINTER_H
