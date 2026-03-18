@@ -93,7 +93,7 @@ tests/
     valid/                 — 11 roundtrip test fixtures (parse→print→parse→compare)
     invalid/               — 4 error test fixtures (expect non-zero exit)
 examples/
-  example.dub              — Core language features
+  example.dub              — Core language features (also run as a roundtrip test)
   example2.dub             — Tuples, vectors, for-range
   interface.dub            — Interface syntax
   sieve.dub                — Sieve of Eratosthenes
