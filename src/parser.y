@@ -150,9 +150,7 @@ func_decl
                 std::move(*name), std::string{}, static_cast<StmtNode*>($6));
             auto params = std::unique_ptr<std::vector<ParamNode*>>(
                 static_cast<std::vector<ParamNode*>*>($4));
-            if (params) {
-                for (auto* p : *params) node->params.emplace_back(p);
-            }
+            for (auto* p : *params) node->params.emplace_back(p);
             $$ = node;
         }
     | FUN IDENTIFIER '(' param_list_opt ')' ARROW type_spec compound_stmt
@@ -163,9 +161,7 @@ func_decl
                 std::move(*name), std::move(*retType), static_cast<StmtNode*>($8));
             auto params = std::unique_ptr<std::vector<ParamNode*>>(
                 static_cast<std::vector<ParamNode*>*>($4));
-            if (params) {
-                for (auto* p : *params) node->params.emplace_back(p);
-            }
+            for (auto* p : *params) node->params.emplace_back(p);
             $$ = node;
         }
     ;
@@ -303,30 +299,26 @@ method_decl
         {
             auto typeName   = std::unique_ptr<std::string>($2);
             auto methodName = std::unique_ptr<std::string>($4);
-            // param_list_opt is not yet represented in MethodDeclNode; free to avoid leaks.
-            auto params = std::unique_ptr<std::vector<ParamNode*>>(
-                static_cast<std::vector<ParamNode*>*>($6));
-            if (params) {
-                for (auto* p : *params) delete p;
-            }
-            $$ = new MethodDeclNode(
+            auto* node = new MethodDeclNode(
                 std::move(*typeName), std::move(*methodName),
                 std::string{}, static_cast<StmtNode*>($8));
+            auto params = std::unique_ptr<std::vector<ParamNode*>>(
+                static_cast<std::vector<ParamNode*>*>($6));
+            for (auto* p : *params) node->params.emplace_back(p);
+            $$ = node;
         }
     | FUN IDENTIFIER COLONCOLON IDENTIFIER '(' param_list_opt ')' ARROW type_spec compound_stmt
         {
             auto typeName   = std::unique_ptr<std::string>($2);
             auto methodName = std::unique_ptr<std::string>($4);
             auto retType    = std::unique_ptr<std::string>($9);
-            // param_list_opt is not yet represented in MethodDeclNode; free to avoid leaks.
-            auto params = std::unique_ptr<std::vector<ParamNode*>>(
-                static_cast<std::vector<ParamNode*>*>($6));
-            if (params) {
-                for (auto* p : *params) delete p;
-            }
-            $$ = new MethodDeclNode(
+            auto* node = new MethodDeclNode(
                 std::move(*typeName), std::move(*methodName),
                 std::move(*retType), static_cast<StmtNode*>($10));
+            auto params = std::unique_ptr<std::vector<ParamNode*>>(
+                static_cast<std::vector<ParamNode*>*>($6));
+            for (auto* p : *params) node->params.emplace_back(p);
+            $$ = node;
         }
     ;
 

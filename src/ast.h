@@ -196,6 +196,7 @@ class MethodDeclNode : public DeclNode {
 public:
     std::string typeName;
     std::string name;
+    std::vector<std::unique_ptr<ParamNode>> params;
     std::string returnType;
     std::unique_ptr<StmtNode> body;
     MethodDeclNode(std::string tn, std::string n, std::string rt, StmtNode* b)
