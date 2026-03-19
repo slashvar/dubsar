@@ -27,6 +27,7 @@ class method_decl_node;
 class interface_type_node;
 class interface_method_node;
 class member_call_node;
+class member_access_node;
 class qualified_call_node;
 class call_node;
 class index_node;
@@ -237,6 +238,14 @@ public:
     std::string method;
     std::vector<std::unique_ptr<expr_node>> args;
     member_call_node(expr_node* obj, std::string m) : object(obj), method(std::move(m)) {}
+    void accept(visitor& v) const override { v.visit(*this); }
+};
+
+class member_access_node : public expr_node {
+public:
+    std::unique_ptr<expr_node> object;
+    std::string field;
+    member_access_node(expr_node* obj, std::string f) : object(obj), field(std::move(f)) {}
     void accept(visitor& v) const override { v.visit(*this); }
 };
 

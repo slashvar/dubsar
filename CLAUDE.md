@@ -51,7 +51,7 @@ ast_node
 ├── expr_node
 │   ├── identifier_node, number_node, string_node
 │   ├── binary_op_node, unary_op_node, assign_node, compound_assign_node
-│   ├── call_node, member_call_node, qualified_call_node
+│   ├── call_node, member_call_node, member_access_node, qualified_call_node
 │   ├── index_node, tuple_expr_node, init_list_expr_node
 │
 ├── stmt_node
@@ -75,6 +75,7 @@ ast_node
 - **Variables**: `var x = 10;`, `var x: int = 10;`, tuple `var x, y = func();`, init-list `var v: vector<int> = {};`
 - **Type declarations**: structs (`type point = struct { x: int; y: int; }`), inheritance (`struct : ParentType`), interfaces (`type reader = interface { read(sz: int) -> vector<byte>; }`)
 - **Methods**: `fun TypeName::methodName(p: int) -> ReturnType { ... }`, called as `obj.method(args)`. Parameters are stored in `method_decl_node` (same as `func_decl_node`) and printed by the shared `print_params` helper.
+- **Field access**: `obj.field`, supports chaining (`obj.child.value`) and assignment (`obj.field = expr`)
 - **Qualified calls**: `ns::func(args)`
 - **C-style for loop**: two forms (no parens, no semicolon before body): `for var i = 0; i < n; ++i { ... }` (var-decl init) and `for expr; expr; expr { ... }` (expression init, e.g. `for i = 1; i <= n; i = i + 1 { ... }`).
 - **Range-based for**: `for var item = range(collection) { ... }`
@@ -90,7 +91,7 @@ ast_node
 tests/
   run_test.py              — Python test runner
   fixtures/
-    valid/                 — 25 roundtrip test fixtures (parse→print→parse→compare)
+    valid/                 — 28 roundtrip test fixtures (parse→print→parse→compare)
     invalid/               — 6 error test fixtures (expect non-zero exit)
 examples/
   example.dub              — Core language features (also a roundtrip test)

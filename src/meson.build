@@ -66,6 +66,9 @@ valid_cases = [
     'tuple_assign_index',
     'tuple_assign_mixed',
     'tuple_assign_chain_index',
+    'field_access',
+    'field_access_chain',
+    'field_access_assign',
 ]
 
 foreach name : valid_cases

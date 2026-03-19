@@ -34,6 +34,7 @@ public:
     void visit(const interface_type_node&) override;
     void visit(const interface_method_node&) override;
     void visit(const member_call_node&) override;
+    void visit(const member_access_node&) override;
     void visit(const qualified_call_node&) override;
     void visit(const call_node&) override;
     void visit(const index_node&) override;

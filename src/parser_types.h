@@ -32,6 +32,7 @@ class type_body_node;
 class interface_type_node;
 class interface_method_node;
 class member_call_node;
+class member_access_node;
 class qualified_call_node;
 class call_node;
 class index_node;

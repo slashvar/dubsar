@@ -192,6 +192,11 @@ void printer::visit(const member_call_node& node) {
     out_ << ')';
 }
 
+void printer::visit(const member_access_node& node) {
+    node.object->accept(*this);
+    out_ << '.' << node.field;
+}
+
 void printer::visit(const qualified_call_node& node) {
     out_ << std::format("{}::{}(", node.qualifier, node.name);
     for (bool first = true; const auto& a : node.args) {

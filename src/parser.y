@@ -667,6 +667,12 @@ expr
             }
             $$ = node;
         }
+    | expr '.' IDENTIFIER
+        {
+            auto fname = std::unique_ptr<std::string>($3);
+            $$ = new member_access_node(
+                static_cast<expr_node*>($1), std::move(*fname));
+        }
     | expr '.' method_name '(' arg_list_opt ')'
         {
             auto mname = std::unique_ptr<std::string>($3);

@@ -23,6 +23,7 @@ class type_decl_node;
 class interface_type_node;
 class interface_method_node;
 class member_call_node;
+class member_access_node;
 class qualified_call_node;
 class call_node;
 class index_node;
@@ -63,6 +64,7 @@ public:
     virtual void visit(const interface_type_node&) = 0;
     virtual void visit(const interface_method_node&) = 0;
     virtual void visit(const member_call_node&) = 0;
+    virtual void visit(const member_access_node&) = 0;
     virtual void visit(const qualified_call_node&) = 0;
     virtual void visit(const call_node&) = 0;
     virtual void visit(const index_node&) = 0;
