@@ -82,7 +82,7 @@ ast_node
 - **Continue / Break**: `continue;`, `break;`
 - **Generic types**: `vector<int>`, `vector<byte>`, etc. are supported in type positions (parameters, return types, variable declarations)
 - **Operators**: arithmetic (including `%`), comparison, logical (`&&`, `||`, `!`), compound assignment (`+=` `-=` `*=` `/=`), pre/post `++`/`--`, indexing `[]`
-- **Tuples**: returned as `return a, b;`, destructured as `var x, y = f();`
+- **Tuples**: returned as `return a, b;`, destructured as `var x, y = f();`, assigned with general lvalue LHS (`v[i], v[j] = v[j], v[i];`)
 
 ### Test Infrastructure
 
@@ -90,7 +90,7 @@ ast_node
 tests/
   run_test.py              — Python test runner
   fixtures/
-    valid/                 — 22 roundtrip test fixtures (parse→print→parse→compare)
+    valid/                 — 25 roundtrip test fixtures (parse→print→parse→compare)
     invalid/               — 6 error test fixtures (expect non-zero exit)
 examples/
   example.dub              — Core language features (also a roundtrip test)
