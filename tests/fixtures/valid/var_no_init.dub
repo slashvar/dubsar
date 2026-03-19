@@ -5,6 +5,7 @@ type point = struct {
 
 fun main() {
     var p: point;
+    var x: int;
     p.x = 10;
-    p.y = (p.x + 5);
+    x = p.x;
 }

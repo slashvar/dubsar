@@ -6,11 +6,8 @@ type outer = struct {
     child: inner;
 }
 
-fun make_outer() -> outer {
-}
-
 fun main() {
-    var o = make_outer();
+    var o: outer;
     var v = o.child.value;
     var s = (o.child.value + 1);
 }

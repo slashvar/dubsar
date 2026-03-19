@@ -69,6 +69,8 @@ valid_cases = [
     'field_access',
     'field_access_chain',
     'field_access_assign',
+    'var_no_init',
+    'var_no_init_generic',
 ]
 
 foreach name : valid_cases

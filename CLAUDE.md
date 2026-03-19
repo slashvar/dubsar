@@ -72,7 +72,7 @@ ast_node
 
 - **Functions**: inferred types (`fun f(x)`), explicit types (`fun f(x: int) -> int`)
 - **Parameters**: by-value (`p`), by-value typed (`p: int`), by-ref (`p: ref`), by-ref typed (`p: int ref`)
-- **Variables**: `var x = 10;`, `var x: int = 10;`, tuple `var x, y = func();`, init-list `var v: vector<int> = {};`
+- **Variables**: `var x = 10;`, `var x: int = 10;`, `var x: int;` (no init), tuple `var x, y = func();`, init-list `var v: vector<int> = {};`
 - **Type declarations**: structs (`type point = struct { x: int; y: int; }`), inheritance (`struct : ParentType`), interfaces (`type reader = interface { read(sz: int) -> vector<byte>; }`)
 - **Methods**: `fun TypeName::methodName(p: int) -> ReturnType { ... }`, called as `obj.method(args)`. Parameters are stored in `method_decl_node` (same as `func_decl_node`) and printed by the shared `print_params` helper.
 - **Field access**: `obj.field`, supports chaining (`obj.child.value`) and assignment (`obj.field = expr`)
