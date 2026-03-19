@@ -35,12 +35,12 @@ if clang_tidy.found()
         'src/printer.h', 'src/printer.cpp',
         'src/main.cpp',
     )
-    run_target('tidy',
-        command: [clang_tidy,
-                  '-p', meson.project_build_root(),
-                  '--extra-arg=--sysroot=' + run_command('xcrun', '--show-sdk-path', check: true).stdout().strip(),
-                  tidy_sources],
-    )
+    tidy_args = [clang_tidy, '-p', meson.project_build_root()]
+    if host_machine.system() == 'darwin'
+        tidy_args += '--extra-arg=--sysroot=' + run_command('xcrun', '--show-sdk-path', check: true).stdout().strip()
+    endif
+    tidy_args += tidy_sources
+    run_target('tidy', command: tidy_args)
 endif
 
 # ── clang-format target ───────────────────────────────────────────────────────
