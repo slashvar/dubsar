@@ -8,7 +8,7 @@ Currently implements lexing, parsing, AST construction, and pretty-printing.
 - Functions with inferred or explicit type annotations
 - `ref` parameters (pass-by-reference)
 - `var` declarations with optional type annotations (`var x = 10;`, `var x: int = 10;`)
-- Tuple variables and assignments (`var x, y = f();`, `return a, b;`)
+- Tuple variables and assignments (`var x, y = f();`, `return a, b;`, `v[i], v[j] = v[j], v[i];`)
 - Init-list expressions (`var v: vector<int> = {};`)
 - `type` declarations for structs with optional single inheritance
 - `type` declarations for interfaces with method signatures
