@@ -63,6 +63,9 @@ valid_cases = [
     'init_list',
     'nested_loops_break',
     'tuple_typed_params',
+    'tuple_assign_index',
+    'tuple_assign_mixed',
+    'tuple_assign_chain_index',
 ]
 
 foreach name : valid_cases

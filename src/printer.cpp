@@ -270,9 +270,9 @@ void printer::visit(const tuple_var_decl_node& node) {
 }
 
 void printer::visit(const tuple_assign_stmt_node& node) {
-    for (bool first = true; const auto& name : node.lhs_names) {
+    for (bool first = true; const auto& lhs : node.lhs_exprs) {
         if (!first) out_ << ", ";
-        out_ << name;
+        lhs->accept(*this);
         first = false;
     }
     out_ << " = ";
