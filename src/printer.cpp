@@ -58,12 +58,12 @@ void printer::visit(const expr_stmt_node& node) { node.expr->accept(*this); }
 // Prints without trailing semicolon; compound_stmt_node adds it via
 // needs_semicolon().
 void printer::visit(const var_decl_node& node) {
-    if (node.type.empty()) {
-        out_ << std::format("var {} = ", node.name);
-    } else {
-        out_ << std::format("var {} : {} = ", node.name, node.type);
+    out_ << "var " << node.name;
+    if (!node.type.empty()) out_ << " : " << node.type;
+    if (node.init) {
+        out_ << " = ";
+        node.init->accept(*this);
     }
-    node.init->accept(*this);
 }
 
 // Prints without trailing semicolon; compound_stmt_node adds it via

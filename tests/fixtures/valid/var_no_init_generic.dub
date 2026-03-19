@@ -1,0 +1,4 @@
+fun main() {
+    var v: vector<int>;
+    var s: vector<string>;
+}

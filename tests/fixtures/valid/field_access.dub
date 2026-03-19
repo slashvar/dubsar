@@ -3,11 +3,8 @@ type point = struct {
     y: int;
 }
 
-fun make_point() -> point {
-}
-
 fun main() {
-    var p = make_point();
+    var p: point;
     var a = p.x;
     var b = p.y;
 }

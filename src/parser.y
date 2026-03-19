@@ -439,6 +439,12 @@ var_decl
             }
             $$ = new var_decl_node(std::move(*name), std::move(*type), node);
         }
+    | VAR IDENTIFIER ':' type_spec ';'
+        {
+            auto name = std::unique_ptr<std::string>($2);
+            auto type = std::unique_ptr<std::string>($4);
+            $$ = new var_decl_node(std::move(*name), std::move(*type), nullptr);
+        }
     ;
 
 for_stmt
