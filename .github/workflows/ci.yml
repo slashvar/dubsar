@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flex bison meson ninja-build clang clang-format
+
+      - name: Setup build
+        run: meson setup build
+        env:
+          CC: clang
+          CXX: clang++
+
+      - name: Check formatting
+        run: |
+          ninja -C build format
+          if ! git diff --exit-code; then
+            echo "::error::Code is not formatted. Run 'ninja -C build format' locally."
+            exit 1
+          fi
+
+      - name: Build
+        run: ninja -C build
+
+      - name: Test
+        run: ninja -C build test
