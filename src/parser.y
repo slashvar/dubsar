@@ -54,12 +54,12 @@ void yyerror(const char* s);
 %type <node> type_decl struct_type program method_decl
 %type <node> interface_type interface_method
 %type <node> if_stmt tuple_var_decl tuple_assign_stmt for_range_stmt continue_stmt break_stmt
-%type <node> tuple_expr
+%type <node> tuple_expr tuple_rhs
 %type <paramvec> param_list_opt param_list
 %type <stringval> type_spec method_name
 %type <nodevec> stmt_list_opt stmt_list field_list_opt field_list
 %type <nodevec> interface_method_list interface_method_list_opt
-%type <nodevec> arg_list_opt arg_list
+%type <nodevec> arg_list_opt arg_list lvalue_list
 %type <namevec> name_list
 
 %left '=' PLUS_EQ MINUS_EQ STAR_EQ SLASH_EQ
@@ -517,6 +517,22 @@ name_list
         }
     ;
 
+// %prec '=' resolves the shift/reduce conflict when '=' follows the last
+// lvalue_list element: the reduction (same level, %left) beats the shift.
+lvalue_list
+    : expr ',' expr %prec '='
+        {
+            $$ = new std::vector<ast_node*>();
+            $$->push_back($1);
+            $$->push_back($3);
+        }
+    | lvalue_list ',' expr %prec '='
+        {
+            $$ = $1;
+            $$->push_back($3);
+        }
+    ;
+
 tuple_var_decl
     : VAR name_list '=' expr ';'
         {
@@ -528,21 +544,21 @@ tuple_var_decl
         }
     ;
 
+// Accepts both a tuple expression and a plain expression on the RHS of a
+// tuple assignment, mirroring the same duality in return_stmt.
+tuple_rhs
+    : expr       { $$ = $1; }
+    | tuple_expr { $$ = $1; }
+    ;
+
 tuple_assign_stmt
-    : name_list '=' tuple_expr ';'
+    : lvalue_list '=' tuple_rhs ';'
         {
-            auto names_raw = std::unique_ptr<std::vector<std::string*>>($1);
-            std::vector<std::string> names;
-            for (auto* s : *names_raw) { names.push_back(std::move(*s)); delete s; }
-            $$ = new tuple_assign_stmt_node(std::move(names),
-                                            static_cast<expr_node*>($3));
-        }
-    | name_list '=' expr ';'
-        {
-            auto names_raw = std::unique_ptr<std::vector<std::string*>>($1);
-            std::vector<std::string> names;
-            for (auto* s : *names_raw) { names.push_back(std::move(*s)); delete s; }
-            $$ = new tuple_assign_stmt_node(std::move(names),
+            auto lhs_raw = std::unique_ptr<std::vector<ast_node*>>(
+                static_cast<std::vector<ast_node*>*>($1));
+            std::vector<std::unique_ptr<expr_node>> lhs;
+            for (auto* n : *lhs_raw) lhs.emplace_back(static_cast<expr_node*>(n));
+            $$ = new tuple_assign_stmt_node(std::move(lhs),
                                             static_cast<expr_node*>($3));
         }
     ;

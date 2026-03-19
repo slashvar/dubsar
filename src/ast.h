@@ -307,10 +307,10 @@ public:
 
 class tuple_assign_stmt_node : public stmt_node {
 public:
-    std::vector<std::string> lhs_names;
+    std::vector<std::unique_ptr<expr_node>> lhs_exprs;
     std::unique_ptr<expr_node> rhs;
-    tuple_assign_stmt_node(std::vector<std::string> ns, expr_node* r)
-        : lhs_names(std::move(ns)), rhs(r) {}
+    tuple_assign_stmt_node(std::vector<std::unique_ptr<expr_node>> lhs, expr_node* r)
+        : lhs_exprs(std::move(lhs)), rhs(r) {}
     void accept(visitor& v) const override { v.visit(*this); }
     [[nodiscard]] bool needs_semicolon() const noexcept override { return true; }
 };
