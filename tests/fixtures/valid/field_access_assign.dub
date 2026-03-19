@@ -1,0 +1,13 @@
+type point = struct {
+    x: int;
+    y: int;
+}
+
+fun make_point() -> point {
+}
+
+fun main() {
+    var p = make_point();
+    p.x = 10;
+    p.y = (p.x + 5);
+}
