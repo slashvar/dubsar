@@ -1,6 +1,6 @@
 project('dubsar', ['cpp', 'c'],
     version: '0.1.0',
-    default_options: ['cpp_std=c++20']
+    default_options: ['cpp_std=c++20', 'warning_level=2', 'werror=true']
 )
 
 # Find flex and bison.
@@ -20,26 +20,25 @@ if cxx.get_id() != 'clang'
     error('This project requires clang compiler')
 endif
 
-add_project_arguments('-Wextra', '-Werror', language: 'cpp')
-
 # Build sources
 subdir('src')
 
 # ── clang-tidy target ────────────────────────────────────────────────────────
 
+hand_written_sources = files(
+    'src/ast.h', 'src/ast.cpp',
+    'src/visitor.h',
+    'src/printer.h', 'src/printer.cpp',
+    'src/main.cpp',
+)
+
 clang_tidy = find_program('clang-tidy', required: false)
 if clang_tidy.found()
-    tidy_sources = files(
-        'src/ast.h', 'src/ast.cpp',
-        'src/visitor.h',
-        'src/printer.h', 'src/printer.cpp',
-        'src/main.cpp',
-    )
     tidy_args = [clang_tidy, '-p', meson.project_build_root()]
     if host_machine.system() == 'darwin'
         tidy_args += '--extra-arg=--sysroot=' + run_command('xcrun', '--show-sdk-path', check: true).stdout().strip()
     endif
-    tidy_args += tidy_sources
+    tidy_args += hand_written_sources
     run_target('tidy', command: tidy_args)
 endif
 
@@ -47,13 +46,7 @@ endif
 
 clang_format = find_program('clang-format', required: false)
 if clang_format.found()
-    fmt_sources = files(
-        'src/ast.h', 'src/ast.cpp',
-        'src/visitor.h',
-        'src/printer.h', 'src/printer.cpp',
-        'src/main.cpp',
-    )
     run_target('format',
-        command: [clang_format, '-i', fmt_sources],
+        command: [clang_format, '-i', hand_written_sources],
     )
 endif

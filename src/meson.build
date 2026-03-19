@@ -1,25 +1,28 @@
-# Generate parser from bison (output .cpp so meson uses C++ compiler)
-parser_cpp = custom_target('parser_cpp',
-    output: 'parser.cpp',
-    command: [bison, '-d', '-o', '@OUTPUT@', '@INPUT@'],
+src_inc = include_directories('.')
+
+# Generate parser from bison (output .cpp so meson uses C++ compiler).
+# Declaring both outputs lets Meson track parser.hpp as a real dependency.
+parser = custom_target('parser',
+    output: ['parser.cpp', 'parser.hpp'],
+    command: [bison, '-d', '-o', '@OUTPUT0@', '@INPUT@'],
     input: 'parser.y'
 )
 
-# Generate lexer from flex (output .cpp so meson uses C++ compiler)
-# Depends on parser_cpp because the generated lexer.cpp includes parser.hpp.
+# Generate lexer from flex (output .cpp so meson uses C++ compiler).
+# The lexer includes parser.hpp; Meson infers the dependency automatically
+# because parser.hpp is a declared output of the parser target.
 lexer_cpp = custom_target('lexer_cpp',
     output: 'lexer.cpp',
     command: [flex, '-o', '@OUTPUT@', '@INPUT@'],
     input: 'lexer.l',
-    depends: [parser_cpp]
 )
 
 # Generated sources are compiled without -Werror to silence warnings in
 # flex/bison output that we cannot control.
 generated_lib = static_library('generated',
-    parser_cpp,
+    parser,
     lexer_cpp,
-    include_directories: include_directories('.'),
+    include_directories: src_inc,
     cpp_args: ['-Wno-error', '-w'],
 )
 
@@ -27,7 +30,7 @@ dubsar = executable('dubsar',
     'main.cpp',
     'ast.cpp',
     'printer.cpp',
-    include_directories: include_directories('.'),
+    include_directories: src_inc,
     link_with: generated_lib,
     install: false
 )
