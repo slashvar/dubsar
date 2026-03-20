@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <format>
+#include <functional>
 #include <unordered_map>
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
