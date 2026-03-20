@@ -93,7 +93,7 @@ ast_node
 tests/
   run_test.py              — Python test runner
   fixtures/
-    valid/                 — 30 roundtrip test fixtures (parse→print→parse→compare)
+    valid/                 — 32 roundtrip test fixtures (parse→print→parse→compare)
     invalid/               — 7 error test fixtures (expect non-zero exit)
 examples/
   example.dub              — Core language features (also a roundtrip test)
