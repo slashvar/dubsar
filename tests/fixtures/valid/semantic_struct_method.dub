@@ -1,0 +1,13 @@
+// Struct with method accessing fields.
+type counter = struct {
+    value: int;
+}
+
+fun counter::get() -> int {
+    return value;
+}
+
+fun counter::add(n: int) -> int {
+    value = (value + n);
+    return value;
+}

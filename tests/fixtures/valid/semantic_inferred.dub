@@ -1,0 +1,13 @@
+// Type inference with un-annotated parameters.
+fun identity(x) {
+    return x;
+}
+
+fun apply(f, x) {
+    return f(x);
+}
+
+fun compose(a, b) {
+    var result = (a + b);
+    return result;
+}

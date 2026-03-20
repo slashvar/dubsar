@@ -1,0 +1,11 @@
+// Two types with the same name — resolver should error.
+type point = struct {
+    x: int;
+    y: int;
+}
+
+type point = struct {
+    r: float;
+    g: float;
+    b: float;
+}

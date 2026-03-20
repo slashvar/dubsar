@@ -1,0 +1,9 @@
+// Basic type inference: annotated params, return, and variable binding.
+fun add(a: int, b: int) -> int {
+    var result: int = (a + b);
+    return result;
+}
+
+fun greet(name: string) -> string {
+    return name;
+}

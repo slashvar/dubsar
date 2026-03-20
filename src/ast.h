@@ -46,6 +46,7 @@ extern std::unique_ptr<program_node> root;
 
 class ast_node {
 public:
+    int line = 0;
     virtual void accept(visitor& v) const = 0;
     [[nodiscard]] virtual bool needs_semicolon() const noexcept { return false; }
     virtual ~ast_node() = default;
