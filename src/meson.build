@@ -26,6 +26,8 @@ generated_lib = static_library('generated',
     cpp_args: ['-Wno-error', '-w'],
 )
 
+argparse_dep = dependency('argparse')
+
 dubsar = executable('dubsar',
     'main.cpp',
     'ast.cpp',
@@ -37,6 +39,7 @@ dubsar = executable('dubsar',
     'resolver.cpp',
     'type_checker.cpp',
     include_directories: src_inc,
+    dependencies: argparse_dep,
     link_with: generated_lib,
     install: false
 )
