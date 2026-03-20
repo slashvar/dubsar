@@ -30,6 +30,13 @@
 "else"               { return ELSE; }
 "continue"           { return CONTINUE; }
 "break"              { return BREAK; }
+"int"                { return INT_TYPE; }
+"bool"               { return BOOL_TYPE; }
+"byte"               { return BYTE_TYPE; }
+"float"              { return FLOAT_TYPE; }
+"double"             { return DOUBLE_TYPE; }
+"char"               { return CHAR_TYPE; }
+"integer"            { return INTEGER_TYPE; }
 
 "<="                 { return LE; }
 ">="                 { return GE; }

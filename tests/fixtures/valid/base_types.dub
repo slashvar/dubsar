@@ -1,0 +1,19 @@
+type point = struct {
+    x: int;
+    y: float;
+    z: double;
+}
+
+fun convert(c: char, b: byte, flag: bool) -> int {
+    var result: int = 0;
+    var pi: float;
+    var precise: double = 0;
+    return result;
+}
+
+fun use_generics(v: vector<int>, chars: vector<char>) -> vector<bool> {
+    var floats: vector<float> = {};
+    var doubles: vector<double> = {};
+    var bytes: vector<byte> = {};
+    return v;
+}
