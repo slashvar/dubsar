@@ -74,6 +74,8 @@ valid_cases = [
     'field_access_assign',
     'var_no_init',
     'var_no_init_generic',
+    'base_types',
+    'sized_int',
 ]
 
 foreach name : valid_cases
@@ -102,6 +104,7 @@ invalid_cases = [
     'incomplete_fun',
     'break_no_semicolon',
     'continue_no_semicolon',
+    'bare_integer',
 ]
 
 foreach name : invalid_cases

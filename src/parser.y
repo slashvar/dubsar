@@ -45,6 +45,7 @@ void yyerror(const char* s);
 %token INC DEC
 %token PLUS_EQ MINUS_EQ STAR_EQ SLASH_EQ
 %token TYPE STRUCT STRING_TYPE INTERFACE
+%token INT_TYPE BOOL_TYPE BYTE_TYPE FLOAT_TYPE DOUBLE_TYPE CHAR_TYPE INTEGER_TYPE
 %token COLONCOLON
 %token ARROW
 %token <stringval> STRING_LITERAL
@@ -56,7 +57,7 @@ void yyerror(const char* s);
 %type <node> if_stmt tuple_var_decl tuple_assign_stmt for_range_stmt continue_stmt break_stmt
 %type <node> tuple_expr tuple_rhs
 %type <paramvec> param_list_opt param_list
-%type <stringval> type_spec method_name
+%type <stringval> type_spec method_name base_type sized_int_type inner_type
 %type <nodevec> stmt_list_opt stmt_list field_list_opt field_list
 %type <nodevec> interface_method_list interface_method_list_opt
 %type <nodevec> arg_list_opt arg_list lvalue_list
@@ -268,7 +269,7 @@ interface_method
 
 method_name
     : IDENTIFIER { $$ = $1; }
-    | STRING_TYPE { $$ = new std::string("string"); }
+    | base_type  { $$ = $1; }
     ;
 
 field_list_opt
@@ -398,19 +399,43 @@ param_list
     ;
 
 type_spec
-    : IDENTIFIER { $$ = $1; }
-    | STRING_TYPE { $$ = new std::string("string"); }
-    | IDENTIFIER '<' IDENTIFIER '>'
+    : IDENTIFIER                            { $$ = $1; }
+    | base_type                             { $$ = $1; }
+    | sized_int_type                        { $$ = $1; }
+    | IDENTIFIER '<' inner_type '>'
         {
             auto outer = std::unique_ptr<std::string>($1);
             auto inner = std::unique_ptr<std::string>($3);
             $$ = new std::string(std::format("{}<{}>", *outer, *inner));
         }
-    | IDENTIFIER '<' STRING_TYPE '>'
+    | IDENTIFIER '<' sized_int_type '>'
         {
             auto outer = std::unique_ptr<std::string>($1);
-            $$ = new std::string(std::format("{}<string>", *outer));
+            auto inner = std::unique_ptr<std::string>($3);
+            $$ = new std::string(std::format("{}<{}>", *outer, *inner));
         }
+    ;
+
+base_type
+    : STRING_TYPE   { $$ = new std::string("string"); }
+    | INT_TYPE      { $$ = new std::string("int"); }
+    | BOOL_TYPE     { $$ = new std::string("bool"); }
+    | BYTE_TYPE     { $$ = new std::string("byte"); }
+    | FLOAT_TYPE    { $$ = new std::string("float"); }
+    | DOUBLE_TYPE   { $$ = new std::string("double"); }
+    | CHAR_TYPE     { $$ = new std::string("char"); }
+    ;
+
+sized_int_type
+    : INTEGER_TYPE '<' NUMBER '>'
+        { $$ = new std::string(std::format("integer<{}>", $3)); }
+    | INTEGER_TYPE '<' '+' NUMBER '>'
+        { $$ = new std::string(std::format("integer<+{}>", $4)); }
+    ;
+
+inner_type
+    : IDENTIFIER    { $$ = $1; }
+    | base_type     { $$ = $1; }
     ;
 
 var_decl

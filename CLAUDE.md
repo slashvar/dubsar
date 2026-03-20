@@ -32,7 +32,7 @@ The pipeline is: `.dub` source file → **Lexer** → **Parser** → **AST** →
 
 ### Source files (`src/`)
 
-- `lexer.l` — Flex lexer. Keywords: `fun`, `var`, `ref`, `return`, `for`, `type`, `struct`, `string`, `interface`, `if`, `else`, `continue`, `break`. Operators include arithmetic (including `%`), comparison, logical, pre/post increment/decrement, compound assignment (`+=`, `-=`, `*=`, `/=`), `::`, `->`, and indexing `[]`. Supports `//` and `/* */` comments. Includes the generated `parser.hpp` for `YYSTYPE` and token constants (no local union definition).
+- `lexer.l` — Flex lexer. Keywords: `fun`, `var`, `ref`, `return`, `for`, `type`, `struct`, `string`, `int`, `bool`, `byte`, `float`, `double`, `char`, `integer`, `interface`, `if`, `else`, `continue`, `break`. Operators include arithmetic (including `%`), comparison, logical, pre/post increment/decrement, compound assignment (`+=`, `-=`, `*=`, `/=`), `::`, `->`, and indexing `[]`. Supports `//` and `/* */` comments. Includes the generated `parser.hpp` for `YYSTYPE` and token constants (no local union definition).
 - `parser.y` — Bison grammar. Produces a `program_node*` in the global `root` variable. Handles: function/method/type declarations at top level, `var` declarations, `for`/for-range loops, `if`/`else`, `return`, `continue`, `break`, compound statements, tuple declarations/assignments, and expressions. Uses `%code requires {}` to embed forward declarations (from `parser_types.h`) into the generated `parser.hpp`. Uses `%destructor` rules (one per union type tag) to delete raw pointers discarded during error recovery. The build uses `-Wextra -Werror`; generated Flex/Bison sources are compiled without `-Werror` to suppress unavoidable warnings.
 - `ast.h` / `ast.cpp` — AST node class hierarchy. `program_node` is the root. All nodes implement `accept(visitor&)` for the visitor pattern. `ast.cpp` defines the global `root` variable.
 - `visitor.h` — Abstract `visitor` base class with `visit()` overloads for every node type.
@@ -81,6 +81,8 @@ ast_node
 - **Range-based for**: `for var item = range(collection) { ... }`
 - **If/else**: `if cond { ... }` / `if cond { ... } else { ... }`
 - **Continue / Break**: `continue;`, `break;`
+- **Base types**: `int`, `bool`, `byte`, `float`, `double`, `char`, `string` are reserved keywords usable in type positions
+- **Sized integers**: `integer<64>` (signed), `integer<+64>` (unsigned); bare `integer` is not valid
 - **Generic types**: `vector<int>`, `vector<byte>`, etc. are supported in type positions (parameters, return types, variable declarations)
 - **Operators**: arithmetic (including `%`), comparison, logical (`&&`, `||`, `!`), compound assignment (`+=` `-=` `*=` `/=`), pre/post `++`/`--`, indexing `[]`
 - **Tuples**: returned as `return a, b;`, destructured as `var x, y = f();`, assigned with general lvalue LHS (`v[i], v[j] = v[j], v[i];`)
@@ -91,8 +93,8 @@ ast_node
 tests/
   run_test.py              — Python test runner
   fixtures/
-    valid/                 — 28 roundtrip test fixtures (parse→print→parse→compare)
-    invalid/               — 6 error test fixtures (expect non-zero exit)
+    valid/                 — 30 roundtrip test fixtures (parse→print→parse→compare)
+    invalid/               — 7 error test fixtures (expect non-zero exit)
 examples/
   example.dub              — Core language features (also a roundtrip test)
   example2.dub             — Tuples, vectors, for-range

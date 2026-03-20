@@ -1,0 +1,10 @@
+fun use_sized(a: integer<64>, b: integer<+64>) -> integer<32> {
+    var x: integer<64> = 0;
+    var y: integer<+32>;
+    return x;
+}
+
+fun generic_sized(v: vector<integer<64>>) -> vector<integer<+64>> {
+    var w: vector<integer<+64>> = {};
+    return w;
+}
