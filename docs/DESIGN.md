@@ -133,12 +133,11 @@ For the full grammar see [`src/parser.y`](../src/parser.y).
 ## 3. Compiler Pipeline
 
 ```
-                 --no-check
-                 ─────────────────────────────────┐
-                                                   │
-                                                   v
-.dub ──> Lexer ──> Parser ──> AST ──> Resolver ──> Type Checker ──> Printer ──> stdout
-         (Flex)    (Bison)            (pass 1)     (pass 2)
+.dub ──> Lexer ──> Parser ──> AST ──┬──> Resolver ──> Type Checker ──┬──> Printer ──> stdout
+         (Flex)    (Bison)          │    (pass 1)      (pass 2)      │
+                                    │                                │
+                                    └────────────────────────────────┘
+                                                --no-check
 ```
 
 | Stage | Role |
