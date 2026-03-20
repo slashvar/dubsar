@@ -1,0 +1,8 @@
+// Two functions with the same name — resolver should error.
+fun add(a: int, b: int) -> int {
+    return (a + b);
+}
+
+fun add(x: int) -> int {
+    return x;
+}

@@ -1,3 +1,4 @@
+#include <cstring>
 #include <filesystem>
 #include <format>
 #include <fstream>
@@ -7,7 +8,12 @@
 #include <string>
 
 #include "ast.h"
+#include "diagnostics.h"
 #include "printer.h"
+#include "resolver.h"
+#include "symbol_table.h"
+#include "type_checker.h"
+#include "unify.h"
 
 extern int yyparse();
 
@@ -27,12 +33,26 @@ using unique_lex_buffer = std::unique_ptr<yy_buffer_state, lex_buffer_deleter>;
 }  // namespace
 
 int main(int argc, char** argv) {
-    if (argc != 2) {
-        std::cerr << std::format("Usage: {} <input-file>\n", argv[0]);
+    bool no_check = false;
+    const char* input_file = nullptr;
+
+    for (int i = 1; i < argc; ++i) {
+        if (std::strcmp(argv[i], "--no-check") == 0) {
+            no_check = true;
+        } else if (input_file == nullptr) {
+            input_file = argv[i];
+        } else {
+            std::cerr << std::format("Usage: {} [--no-check] <input-file>\n", argv[0]);
+            return 1;
+        }
+    }
+
+    if (input_file == nullptr) {
+        std::cerr << std::format("Usage: {} [--no-check] <input-file>\n", argv[0]);
         return 1;
     }
 
-    const std::filesystem::path input_path{argv[1]};
+    const std::filesystem::path input_path{input_file};
 
     std::ifstream file{input_path};
     if (!file) {
@@ -49,6 +69,26 @@ int main(int argc, char** argv) {
     }
 
     if (root) {
+        // Semantic passes (unless --no-check)
+        if (!no_check) {
+            diagnostics diag;
+            symbol_table symtab;
+            type_env env;
+
+            resolver res{symtab, env, diag};
+            res.resolve(*root);
+
+            if (!diag.has_errors()) {
+                type_checker tc{symtab, env, diag};
+                root->accept(tc);
+            }
+
+            if (diag.has_errors()) {
+                diag.emit(std::cerr);
+                return 1;
+            }
+        }
+
         printer p{std::cout};
         root->accept(p);
         std::cout << '\n';

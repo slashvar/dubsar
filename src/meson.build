@@ -30,6 +30,12 @@ dubsar = executable('dubsar',
     'main.cpp',
     'ast.cpp',
     'printer.cpp',
+    'types.cpp',
+    'unify.cpp',
+    'diagnostics.cpp',
+    'symbol_table.cpp',
+    'resolver.cpp',
+    'type_checker.cpp',
     include_directories: src_inc,
     link_with: generated_lib,
     install: false
@@ -76,6 +82,9 @@ valid_cases = [
     'var_no_init_generic',
     'base_types',
     'sized_int',
+    'semantic_basic',
+    'semantic_struct_method',
+    'semantic_inferred',
 ]
 
 foreach name : valid_cases
@@ -105,6 +114,8 @@ invalid_cases = [
     'break_no_semicolon',
     'continue_no_semicolon',
     'bare_integer',
+    'duplicate_type',
+    'duplicate_func',
 ]
 
 foreach name : invalid_cases

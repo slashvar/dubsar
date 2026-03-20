@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**dubsar** is a compiler frontend (WiP) for a custom programming language also called "dubsar". It implements lexing, parsing, AST construction, and pretty-printing via a visitor pattern. The language supports functions, variables, structs with inheritance, interfaces, methods, control flow (if/else, for, for-range, continue, break), tuples, and type inference.
+**dubsar** is a compiler frontend (WiP) for a custom programming language also called "dubsar". It implements lexing, parsing, AST construction, pretty-printing via a visitor pattern, and a semantic pass with OCaml-inspired type inference using Hindley-Milner unification and row types. The language supports functions, variables, structs with inheritance, interfaces, methods, control flow (if/else, for, for-range, continue, break), tuples, and type inference.
 
 ## Build System
 
@@ -20,6 +20,9 @@ ninja -C build
 # Run on a .dub source file
 ./build/src/dubsar examples/example.dub
 
+# Run without type checking (parse + print only)
+./build/src/dubsar --no-check examples/example.dub
+
 # Run tests
 ninja -C build test
 ```
@@ -28,17 +31,25 @@ The build system defines roundtrip tests (parse → print → parse → compare)
 
 ## Architecture
 
-The pipeline is: `.dub` source file → **Lexer** → **Parser** → **AST** → **Printer** → stdout.
+The pipeline is: `.dub` source file → **Lexer** → **Parser** → **AST** → **Resolver** → **Type Checker** → **Printer** → stdout.
+
+The `--no-check` flag skips the resolver and type checker passes.
 
 ### Source files (`src/`)
 
 - `lexer.l` — Flex lexer. Keywords: `fun`, `var`, `ref`, `return`, `for`, `type`, `struct`, `string`, `int`, `bool`, `byte`, `float`, `double`, `char`, `integer`, `interface`, `if`, `else`, `continue`, `break`. Operators include arithmetic (including `%`), comparison, logical, pre/post increment/decrement, compound assignment (`+=`, `-=`, `*=`, `/=`), `::`, `->`, and indexing `[]`. Supports `//` and `/* */` comments. Includes the generated `parser.hpp` for `YYSTYPE` and token constants (no local union definition).
-- `parser.y` — Bison grammar. Produces a `program_node*` in the global `root` variable. Handles: function/method/type declarations at top level, `var` declarations, `for`/for-range loops, `if`/`else`, `return`, `continue`, `break`, compound statements, tuple declarations/assignments, and expressions. Uses `%code requires {}` to embed forward declarations (from `parser_types.h`) into the generated `parser.hpp`. Uses `%destructor` rules (one per union type tag) to delete raw pointers discarded during error recovery. The build uses `-Wextra -Werror`; generated Flex/Bison sources are compiled without `-Werror` to suppress unavoidable warnings.
-- `ast.h` / `ast.cpp` — AST node class hierarchy. `program_node` is the root. All nodes implement `accept(visitor&)` for the visitor pattern. `ast.cpp` defines the global `root` variable.
+- `parser.y` — Bison grammar. Produces a `program_node*` in the global `root` variable. Handles: function/method/type declarations at top level, `var` declarations, `for`/for-range loops, `if`/`else`, `return`, `continue`, `break`, compound statements, tuple declarations/assignments, and expressions. Uses `%code requires {}` to embed forward declarations (from `parser_types.h`) into the generated `parser.hpp`. Uses `%destructor` rules (one per union type tag) to delete raw pointers discarded during error recovery. The `loc()` template sets `node->line = yylineno` on every allocated AST node.
+- `ast.h` / `ast.cpp` — AST node class hierarchy. `program_node` is the root. All nodes have `int line` for source locations. All nodes implement `accept(visitor&)` for the visitor pattern. `ast.cpp` defines the global `root` variable.
 - `visitor.h` — Abstract `visitor` base class with `visit()` overloads for every node type.
 - `printer.h` / `printer.cpp` — `printer` concrete visitor for AST pretty-printing. Adds parentheses around all binary ops for round-trip stability (avoids any precedence ambiguity on re-parse).
 - `parser_types.h` — Forward declarations of all AST node classes. Included via `%code requires {}` in `parser.y` so it appears in the generated `parser.hpp`, making the declarations available to any file that includes that header (including the lexer).
-- `main.cpp` — Entry point: opens a file, calls `yyparse()`, then calls `printer` on the AST root.
+- `types.h` / `types.cpp` — Type IR hierarchy (`type_t` base, `prim_type_t`, `sized_int_type_t`, `type_var_t`, `fun_type_t`, `tuple_type_t`, `generic_type_t`, `row_type_t`, `named_type_t`). Includes `parse_type_string()` to convert opaque AST type strings into the type IR. Primitive types are singletons.
+- `unify.h` / `unify.cpp` — Unification engine (`type_env`). Implements HM-style unification with occurs check, Rémy-style row unification for struct/interface polymorphism, and generalize/instantiate for let-polymorphism. Types use `shared_ptr` with union-find.
+- `diagnostics.h` / `diagnostics.cpp` — Error/warning collection with source locations. Resolution errors are hard errors (exit 1); type inference mismatches are warnings (non-fatal).
+- `symbol_table.h` / `symbol_table.cpp` — Scoped symbol table (`push_scope`/`pop_scope`/`bind`/`lookup`) and type registry (`register_type`/`lookup_type`) with function registry.
+- `resolver.h` / `resolver.cpp` — Name resolution visitor. Two sub-passes: (1) register all type names, (2) fill in struct fields, interface methods, function signatures, resolve inheritance. Structs become closed rows, interfaces become open rows.
+- `type_checker.h` / `type_checker.cpp` — Type inference visitor. Infers expression types via HM unification, binds variables in scoped symbol table, checks function/method bodies. Expression types are stored in a side table (`unordered_map<const ast_node*, type_ptr>`) to avoid modifying AST node classes. Method bodies have implicit access to their struct's fields. Generalization at top-level function boundaries.
+- `main.cpp` — Entry point: opens a file, calls `yyparse()`, runs resolver + type checker (unless `--no-check`), then calls `printer` on the AST root.
 
 ### Build-generated files (`build/src/`)
 
@@ -47,7 +58,7 @@ The pipeline is: `.dub` source file → **Lexer** → **Parser** → **AST** →
 ### AST Node Hierarchy
 
 ```
-ast_node
+ast_node (int line)
 ├── expr_node
 │   ├── identifier_node, number_node, string_node
 │   ├── binary_op_node, unary_op_node, assign_node, compound_assign_node
@@ -67,6 +78,30 @@ ast_node
         ├── struct_type_node
         └── interface_type_node (with interface_method_node)
 ```
+
+### Type IR Hierarchy
+
+```
+type_t (abstract)
+├── prim_type_t          — int, bool, byte, float, double, char, string (singletons)
+├── sized_int_type_t     — integer<N> with signedness flag
+├── type_var_t           — unification variable (id, bound, level)
+├── fun_type_t           — (T1, T2, ...) -> T_ret
+├── tuple_type_t         — (T1, T2, ...)
+├── generic_type_t       — name + type args (e.g. vector<int>)
+├── row_type_t           — { label1: T1, ... | tail } (tail = nullptr or type_var)
+└── named_type_t         — reference to declared struct/interface
+```
+
+### Semantic Pass Design
+
+- **Structs are closed rows, interfaces are open rows** — interface satisfaction works via row unification where the open tail binds to residual fields
+- **`ref` is calling convention, not a type** — `ref int` has type `int`; `is_ref` stays on `param_node`/`symbol_entry` only
+- **Expression types in side table** — avoids modifying 28+ AST node classes; printer and roundtrip tests unaffected
+- **Method bodies bind struct fields** — methods have implicit access to their type's fields in scope
+- **Top-level let-polymorphism** — un-annotated top-level functions get generalized (e.g. `fun id(x) { return x; }` → `∀α. α → α`)
+- **Permissive inference** — undefined functions/variables get fresh type vars (no stdlib yet); type mismatches are warnings, not hard errors
+- **Resolution errors are hard errors** — duplicate type/function names cause exit code 1
 
 ### Language Features
 
@@ -93,8 +128,8 @@ ast_node
 tests/
   run_test.py              — Python test runner
   fixtures/
-    valid/                 — 32 roundtrip test fixtures (parse→print→parse→compare)
-    invalid/               — 7 error test fixtures (expect non-zero exit)
+    valid/                 — 35 roundtrip test fixtures (parse→print→parse→compare)
+    invalid/               — 9 error test fixtures (expect non-zero exit)
 examples/
   example.dub              — Core language features (also a roundtrip test)
   example2.dub             — Tuples, vectors, for-range

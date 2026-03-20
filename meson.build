@@ -29,6 +29,12 @@ hand_written_sources = files(
     'src/ast.h', 'src/ast.cpp',
     'src/visitor.h',
     'src/printer.h', 'src/printer.cpp',
+    'src/types.h', 'src/types.cpp',
+    'src/unify.h', 'src/unify.cpp',
+    'src/diagnostics.h', 'src/diagnostics.cpp',
+    'src/symbol_table.h', 'src/symbol_table.cpp',
+    'src/resolver.h', 'src/resolver.cpp',
+    'src/type_checker.h', 'src/type_checker.cpp',
     'src/main.cpp',
 )
 
