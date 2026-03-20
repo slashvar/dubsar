@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Build System
 
-This project uses **Meson** with **Clang** (required — the build will error if another compiler is detected). Flex and **Bison ≥ 3.0** are also required. C++20 is used. On macOS the system Bison (2.x) is too old; install a newer version via Homebrew (`brew install bison`). Meson will detect it automatically via the Homebrew opt path.
+This project uses **Meson** with **Clang** (required — the build will error if another compiler is detected). Flex and **Bison ≥ 3.0** are also required. C++20 is used. On macOS the system Bison (2.x) is too old; install a newer version via Homebrew (`brew install bison`). Meson will detect it automatically via the Homebrew opt path. CLI argument parsing uses [argparse](https://github.com/p-ranav/argparse) (v3.2, header-only, fetched automatically via Meson WrapDB).
 
 ```bash
 # Configure (first time or after meson.build changes)
@@ -49,7 +49,7 @@ The `--no-check` flag skips the resolver and type checker passes.
 - `symbol_table.h` / `symbol_table.cpp` — Scoped symbol table (`push_scope`/`pop_scope`/`bind`/`lookup`) and type registry (`register_type`/`lookup_type`) with function registry.
 - `resolver.h` / `resolver.cpp` — Name resolution visitor. Two sub-passes: (1) register all type names, (2) fill in struct fields, interface methods, function signatures, resolve inheritance. Structs become closed rows, interfaces become open rows.
 - `type_checker.h` / `type_checker.cpp` — Type inference visitor. Infers expression types via HM unification, binds variables in scoped symbol table, checks function/method bodies. Expression types are stored in a side table (`unordered_map<const ast_node*, type_ptr>`) to avoid modifying AST node classes. Method bodies have implicit access to their struct's fields. Generalization at top-level function boundaries.
-- `main.cpp` — Entry point: opens a file, calls `yyparse()`, runs resolver + type checker (unless `--no-check`), then calls `printer` on the AST root.
+- `main.cpp` — Entry point: uses [argparse](https://github.com/p-ranav/argparse) for CLI parsing (`--no-check`, positional input file), opens the file, calls `yyparse()`, runs resolver + type checker (unless `--no-check`), then calls `printer` on the AST root.
 
 ### Build-generated files (`build/src/`)
 

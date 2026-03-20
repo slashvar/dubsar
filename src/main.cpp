@@ -1,4 +1,4 @@
-#include <cstring>
+#include <argparse/argparse.hpp>
 #include <filesystem>
 #include <format>
 #include <fstream>
@@ -33,24 +33,23 @@ using unique_lex_buffer = std::unique_ptr<yy_buffer_state, lex_buffer_deleter>;
 }  // namespace
 
 int main(int argc, char** argv) {
-    bool no_check = false;
-    const char* input_file = nullptr;
+    argparse::ArgumentParser program("dubsar", "0.1.0");
+    program.add_argument("input-file").help("source file to compile");
+    program.add_argument("--no-check")
+        .help("skip type checking (parse and print only)")
+        .default_value(false)
+        .implicit_value(true);
 
-    for (int i = 1; i < argc; ++i) {
-        if (std::strcmp(argv[i], "--no-check") == 0) {
-            no_check = true;
-        } else if (input_file == nullptr) {
-            input_file = argv[i];
-        } else {
-            std::cerr << std::format("Usage: {} [--no-check] <input-file>\n", argv[0]);
-            return 1;
-        }
-    }
-
-    if (input_file == nullptr) {
-        std::cerr << std::format("Usage: {} [--no-check] <input-file>\n", argv[0]);
+    try {
+        program.parse_args(argc, argv);
+    } catch (const std::exception& e) {
+        std::cerr << e.what() << '\n';
+        std::cerr << program;
         return 1;
     }
+
+    auto input_file = program.get<std::string>("input-file");
+    auto no_check = program.get<bool>("--no-check");
 
     const std::filesystem::path input_path{input_file};
 
