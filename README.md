@@ -1,7 +1,10 @@
 # dubsar
 
 A compiler frontend (work in progress) for the **dubsar** programming language.
-Currently implements lexing, parsing, AST construction, and pretty-printing.
+It lexes, parses, builds an AST, resolves names, infers types, and pretty-prints
+the result. Code generation is not implemented.
+
+See [`docs/DESIGN.md`](docs/DESIGN.md) for the architecture and type system.
 
 ## Language features
 
@@ -14,7 +17,8 @@ Currently implements lexing, parsing, AST construction, and pretty-printing.
 - `type` declarations for interfaces with method signatures
 - Methods declared as `fun TypeName::methodName()`
 - Member calls (`obj.method(args)`) and qualified calls (`ns::func(args)`)
-- Generic types (`vector<int>`, `vector<byte>`, etc.)
+- Generic types (`vector<int>`, `vector<byte>`, …)
+- Sized integers (`integer<64>` signed, `integer<+64>` unsigned)
 - C-style `for` loops: `for var i = 0; i < n; ++i { ... }` and `for expr; expr; expr { ... }`
 - Range-based `for` loops: `for var item = range(collection) { ... }`
 - `if`/`else` statements
@@ -28,80 +32,67 @@ See `examples/` for sample source files.
 
 ## Requirements
 
-| Tool | Notes |
-|------|-------|
-| Clang | Required (GCC is not supported) |
-| Flex | Lexer generation |
-| Bison ≥ 3.0 | Parser generation (`%destructor` type-tag syntax requires Bison 3+; on macOS the system Bison is too old — `brew install bison`, Meson detects it automatically) |
-| Meson ≥ 1.0 | Build system |
-| Ninja | Build backend |
-| Python 3 | Test runner |
-| clang-format | Optional, for the `format` target |
-| clang-tidy | Optional, for the `tidy` target |
+| Tool         | Notes                                                                                                                                            |
+|--------------|--------------------------------------------------------------------------------------------------------------------------------------------------|
+| Clang        | Required; the build errors out on any other compiler                                                                                             |
+| Flex         | Lexer generation                                                                                                                                 |
+| Bison ≥ 3.0  | Parser generation (`%destructor` type tags and `%empty` need Bison 3+; the macOS system Bison is too old — `brew install bison`, Meson finds it) |
+| Meson ≥ 1.0  | Build system                                                                                                                                     |
+| Ninja        | Build backend                                                                                                                                    |
+| Python 3     | Test runner                                                                                                                                      |
+| clang-format | Optional, for the `format` target                                                                                                                |
+| clang-tidy   | Optional, for the `tidy` target                                                                                                                  |
+
+[argparse](https://github.com/p-ranav/argparse) 3.2 is header-only and Meson
+fetches it from WrapDB automatically.
 
 ## Build
 
 ```bash
-# First-time setup
-meson setup build
-
-# Compile
+meson setup build   # first time, or after editing meson.build
 ninja -C build
 ```
 
-The binary is produced at `build/src/dubsar`. It reads a `.dub` source file and
-prints the parsed AST back as formatted dubsar source code:
+## Usage
+
+The binary lands at `build/src/dubsar`. It reads one `.dub` file, writes the
+pretty-printed program to stdout, and writes diagnostics to stderr.
 
 ```bash
 build/src/dubsar examples/example.dub
+build/src/dubsar --no-check examples/example.dub   # parse and print only
 ```
+
+| Flag         | Effect                              |
+|--------------|-------------------------------------|
+| `--no-check` | Skips the resolver and type checker |
+| `--help`     | Prints usage                        |
+
+Resolution errors (duplicate names, bad inheritance) exit 1. Type mismatches are
+warnings and still produce output.
 
 ## Tests
 
 ```bash
 meson test -C build
+meson test -C build --print-errorlogs   # show output from failures
 ```
 
-Tests are registered in two categories:
+| Category    | Checks                                                                   |
+|-------------|--------------------------------------------------------------------------|
+| `roundtrip` | Parse a fixture, print it, re-parse, and compare the two printed outputs |
+| `error`     | Malformed input exits non-zero                                           |
 
-- **roundtrip** — parses a fixture, prints it, re-parses the output, and checks
-  that both printed outputs are identical (verifies printer stability).
-- **error** — checks that malformed inputs are rejected with a non-zero exit code.
+## Build targets
 
-To see output from failing tests:
+| Target   | Command                 | Effect                                                 |
+|----------|-------------------------|--------------------------------------------------------|
+| `format` | `ninja -C build format` | `clang-format -i` over the hand-written C++            |
+| `tidy`   | `ninja -C build tidy`   | `clang-tidy` over the same files; skips generated code |
+| `clean`  | `ninja -C build clean`  | Removes artifacts, keeps the build configured          |
 
-```bash
-meson test -C build --print-errorlogs
-```
-
-## Clean
-
-```bash
-ninja -C build clean
-```
-
-This removes compiled artifacts while keeping the build configured. To fully
-reset (e.g. after changing `meson.build`), remove the directory and re-run setup:
+To reset fully after editing `meson.build`:
 
 ```bash
 rm -rf build && meson setup build
 ```
-
-## Format
-
-```bash
-ninja -C build format
-```
-
-Runs `clang-format -i` on all hand-written C++ sources using the `.clang-format`
-config (Google style, 4-space indent, 100-column limit).
-
-## Lint
-
-```bash
-ninja -C build tidy
-```
-
-Runs `clang-tidy` on all hand-written C++ sources using the `.clang-tidy` config.
-Requires a configured build directory so that `compile_commands.json` is available.
-Generated Flex/Bison sources are excluded.
