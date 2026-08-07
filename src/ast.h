@@ -7,47 +7,14 @@
 
 #include "visitor.h"
 
-// Forward declarations
-class ast_node;
-class expr_node;
-class stmt_node;
-class decl_node;
-class type_body_node;
-class program_node;
-class func_decl_node;
-class var_decl_node;
-class for_stmt_node;
-class compound_stmt_node;
-class expr_stmt_node;
-class param_node;
-class type_decl_node;
-class struct_type_node;
-class struct_field_node;
-class method_decl_node;
-class interface_type_node;
-class interface_method_node;
-class member_call_node;
-class member_access_node;
-class qualified_call_node;
-class call_node;
-class index_node;
-class compound_assign_node;
-class if_stmt_node;
-class tuple_expr_node;
-class tuple_var_decl_node;
-class tuple_assign_stmt_node;
-class for_range_stmt_node;
-class continue_stmt_node;
-class break_stmt_node;
-class init_list_expr_node;
-
-// Global root for the AST - defined in ast.cpp
+// Root of the parsed program, assigned by the parser.  Defined in ast.cpp.
 extern std::unique_ptr<program_node> root;
 
 class ast_node {
 public:
     int line = 0;
     virtual void accept(visitor& v) const = 0;
+    // True when the printer must append ';' after this node in a statement list.
     [[nodiscard]] virtual bool needs_semicolon() const noexcept { return false; }
     virtual ~ast_node() = default;
 };
@@ -56,11 +23,10 @@ class expr_node : public ast_node {};
 
 class stmt_node : public ast_node {};
 
-// decl_node inherits stmt_node: declarations are valid statement-context nodes,
-// which avoids undefined-behaviour casts in compound-statement handling.
+// Declarations are usable in statement position, so no downcast is needed when
+// a compound statement holds one.
 class decl_node : public stmt_node {};
 
-// Abstract base for type bodies (struct and interface).
 class type_body_node : public ast_node {};
 
 class identifier_node : public expr_node {
@@ -110,8 +76,7 @@ public:
     void accept(visitor& v) const override { v.visit(*this); }
 };
 
-// Wraps an expression used in statement position, eliminating the need for
-// an undefined expr_node* -> stmt_node* reinterpret cast.
+// An expression used in statement position.
 class expr_stmt_node : public stmt_node {
 public:
     std::unique_ptr<expr_node> expr;
@@ -290,14 +255,14 @@ class if_stmt_node : public stmt_node {
 public:
     std::unique_ptr<expr_node> condition;
     std::unique_ptr<stmt_node> then_body;
-    std::unique_ptr<stmt_node> else_body;  // nullptr if no else
+    std::unique_ptr<stmt_node> else_body;  // nullptr when there is no else
     if_stmt_node(expr_node* c, stmt_node* t, stmt_node* e)
         : condition(c), then_body(t), else_body(e) {}
     void accept(visitor& v) const override { v.visit(*this); }
 };
 
-// Represents a tuple expression: e1, e2, ... (used in return and tuple-assign).
-// NOT part of the general expr grammar to avoid conflicts with arg-list commas.
+// A tuple expression `e1, e2, ...`.  Only valid in return statements and on the
+// right-hand side of a tuple assignment, not in the general expression grammar.
 class tuple_expr_node : public expr_node {
 public:
     std::vector<std::unique_ptr<expr_node>> elements;

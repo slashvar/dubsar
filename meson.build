@@ -26,6 +26,7 @@ subdir('src')
 # ── clang-tidy target ────────────────────────────────────────────────────────
 
 hand_written_sources = files(
+    'src/ast_fwd.h',
     'src/ast.h', 'src/ast.cpp',
     'src/visitor.h',
     'src/printer.h', 'src/printer.cpp',

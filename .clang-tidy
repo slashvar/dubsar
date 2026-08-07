@@ -26,7 +26,7 @@ Checks: >
 WarningsAsErrors: ''
 
 # Only diagnose issues in our own headers; skip system and generated headers.
-HeaderFilterRegex: '^.*/src/(ast|visitor|printer|parser_types)\.h$'
+HeaderFilterRegex: '^.*/src/(ast|ast_fwd|visitor|printer)\.h$'
 
 CheckOptions:
   - key: readability-identifier-naming.ClassCase

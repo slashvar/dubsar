@@ -8,15 +8,6 @@
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 void printer::pad() const { out_ << std::string(indent_, ' '); }
-void printer::pad(int extra) const { out_ << std::string(indent_ + extra, ' '); }
-
-void printer::print_params(const std::vector<std::unique_ptr<param_node>>& params) {
-    for (bool first = true; const auto& p : params) {
-        if (!first) out_ << ", ";
-        p->accept(*this);
-        first = false;
-    }
-}
 
 // ── Expressions ───────────────────────────────────────────────────────────────
 
@@ -26,7 +17,7 @@ void printer::visit(const number_node& node) { out_ << node.value; }
 
 void printer::visit(const string_node& node) { out_ << std::format("\"{}\"", node.value); }
 
-// Parentheses guarantee round-trip correctness regardless of precedence context.
+// Always parenthesised, so re-parsing cannot change the tree shape.
 void printer::visit(const binary_op_node& node) {
     out_ << '(';
     node.left->accept(*this);
@@ -55,8 +46,7 @@ void printer::visit(const assign_node& node) {
 
 void printer::visit(const expr_stmt_node& node) { node.expr->accept(*this); }
 
-// Prints without trailing semicolon; compound_stmt_node adds it via
-// needs_semicolon().
+// The trailing semicolon comes from the enclosing statement list.
 void printer::visit(const var_decl_node& node) {
     out_ << "var " << node.name;
     if (!node.type.empty()) out_ << " : " << node.type;
@@ -66,8 +56,6 @@ void printer::visit(const var_decl_node& node) {
     }
 }
 
-// Prints without trailing semicolon; compound_stmt_node adds it via
-// needs_semicolon().
 void printer::visit(const return_stmt_node& node) {
     out_ << "return";
     if (node.value) {
@@ -76,8 +64,7 @@ void printer::visit(const return_stmt_node& node) {
     }
 }
 
-// Grammar: for var_decl expr ; expr body
-// var_decl omits its own semicolon, so for_stmt_node supplies it here.
+// The header separators are printed here because var_decl omits its semicolon.
 void printer::visit(const for_stmt_node& node) {
     out_ << "for ";
     node.init->accept(*this);
@@ -106,22 +93,22 @@ void printer::visit(const compound_stmt_node& node) {
 // ── Parameters ────────────────────────────────────────────────────────────────
 
 void printer::visit(const param_node& node) {
-    if (node.is_ref && node.type.empty()) {
-        out_ << std::format("{} : ref", node.name);
-    } else if (!node.type.empty() && !node.is_ref) {
-        out_ << std::format("{} : {}", node.name, node.type);
-    } else if (!node.type.empty() && node.is_ref) {
-        out_ << std::format("{} : ref {}", node.name, node.type);
-    } else {
-        out_ << node.name;
+    out_ << node.name;
+    if (!node.is_ref && node.type.empty()) {
+        return;
     }
+    out_ << " : ";
+    if (node.is_ref) {
+        out_ << (node.type.empty() ? "ref" : "ref ");
+    }
+    out_ << node.type;
 }
 
 // ── Declarations ──────────────────────────────────────────────────────────────
 
 void printer::visit(const func_decl_node& node) {
     out_ << std::format("fun {}(", node.name);
-    print_params(node.params);
+    print_list(node.params);
     out_ << ')';
     if (!node.return_type.empty()) out_ << std::format(" -> {}", node.return_type);
     out_ << ' ';
@@ -148,7 +135,7 @@ void printer::visit(const struct_type_node& node) {
 
 void printer::visit(const method_decl_node& node) {
     out_ << std::format("fun {}::{}(", node.type_name, node.name);
-    print_params(node.params);
+    print_list(node.params);
     out_ << ')';
     if (!node.return_type.empty()) out_ << std::format(" -> {}", node.return_type);
     out_ << ' ';
@@ -175,7 +162,7 @@ void printer::visit(const interface_type_node& node) {
 
 void printer::visit(const interface_method_node& node) {
     out_ << node.name << '(';
-    print_params(node.params);
+    print_list(node.params);
     out_ << ')';
     if (!node.return_type.empty()) out_ << std::format(" -> {}", node.return_type);
     out_ << ';';
@@ -184,11 +171,7 @@ void printer::visit(const interface_method_node& node) {
 void printer::visit(const member_call_node& node) {
     node.object->accept(*this);
     out_ << '.' << node.method << '(';
-    for (bool first = true; const auto& a : node.args) {
-        if (!first) out_ << ", ";
-        a->accept(*this);
-        first = false;
-    }
+    print_list(node.args);
     out_ << ')';
 }
 
@@ -199,21 +182,13 @@ void printer::visit(const member_access_node& node) {
 
 void printer::visit(const qualified_call_node& node) {
     out_ << std::format("{}::{}(", node.qualifier, node.name);
-    for (bool first = true; const auto& a : node.args) {
-        if (!first) out_ << ", ";
-        a->accept(*this);
-        first = false;
-    }
+    print_list(node.args);
     out_ << ')';
 }
 
 void printer::visit(const call_node& node) {
     out_ << node.name << '(';
-    for (bool first = true; const auto& a : node.args) {
-        if (!first) out_ << ", ";
-        a->accept(*this);
-        first = false;
-    }
+    print_list(node.args);
     out_ << ')';
 }
 
@@ -247,21 +222,11 @@ void printer::visit(const break_stmt_node& /*node*/) { out_ << "break"; }
 
 void printer::visit(const init_list_expr_node& node) {
     out_ << '{';
-    for (bool first = true; const auto& a : node.args) {
-        if (!first) out_ << ", ";
-        a->accept(*this);
-        first = false;
-    }
+    print_list(node.args);
     out_ << '}';
 }
 
-void printer::visit(const tuple_expr_node& node) {
-    for (bool first = true; const auto& e : node.elements) {
-        if (!first) out_ << ", ";
-        e->accept(*this);
-        first = false;
-    }
-}
+void printer::visit(const tuple_expr_node& node) { print_list(node.elements); }
 
 void printer::visit(const tuple_var_decl_node& node) {
     out_ << "var ";
@@ -275,11 +240,7 @@ void printer::visit(const tuple_var_decl_node& node) {
 }
 
 void printer::visit(const tuple_assign_stmt_node& node) {
-    for (bool first = true; const auto& lhs : node.lhs_exprs) {
-        if (!first) out_ << ", ";
-        lhs->accept(*this);
-        first = false;
-    }
+    print_list(node.lhs_exprs);
     out_ << " = ";
     node.rhs->accept(*this);
 }
@@ -291,8 +252,8 @@ void printer::visit(const for_range_stmt_node& node) {
     node.body->accept(*this);
 }
 
+// Top-level declarations are separated by a blank line.
 void printer::visit(const program_node& node) {
-    // C++20 init-statement in range-for for blank-line separation.
     for (bool first = true; const auto& decl : node.declarations) {
         if (!first) out_ << '\n';
         decl->accept(*this);

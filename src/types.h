@@ -126,9 +126,11 @@ public:
     [[nodiscard]] type_kind kind() const noexcept override { return type_kind::row; }
     [[nodiscard]] std::string to_string() const override;
 
-    // Find an entry by label.  Returns nullptr if not found.
+    // Returns the type bound to `label`, or nullptr when absent.
     [[nodiscard]] type_ptr find_entry(const std::string& label) const;
 };
+
+using row_ptr = std::shared_ptr<row_type_t>;
 
 // ── Named type: reference to a declared struct/interface ────────────────────
 

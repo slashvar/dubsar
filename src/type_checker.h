@@ -9,73 +9,86 @@
 #include "unify.h"
 #include "visitor.h"
 
-class ast_node;
-
-// Type inference visitor.  Walks the AST after name resolution, infers types
-// for expressions, and checks type consistency.  Expression types are stored
-// in a side table to avoid modifying AST node classes.
+// Infers expression types over a resolved AST and reports inconsistencies as
+// warnings.  Inferred types live in a side table, so AST nodes stay untouched.
 class type_checker : public visitor {
 public:
     type_checker(symbol_table& symtab, type_env& env, diagnostics& diag)
         : symtab_(symtab), env_(env), diag_(diag) {}
 
-    // Side table: maps AST nodes to their inferred types.
+    // Returns the inferred type of `node`, or nullptr when it has none.
     [[nodiscard]] type_ptr type_of(const ast_node* node) const;
 
-    // visitor interface
-    void visit(const class identifier_node&) override;
-    void visit(const class number_node&) override;
-    void visit(const class string_node&) override;
-    void visit(const class binary_op_node&) override;
-    void visit(const class unary_op_node&) override;
-    void visit(const class assign_node&) override;
-    void visit(const class expr_stmt_node&) override;
-    void visit(const class param_node&) override;
-    void visit(const class var_decl_node&) override;
-    void visit(const class return_stmt_node&) override;
-    void visit(const class for_stmt_node&) override;
-    void visit(const class compound_stmt_node&) override;
-    void visit(const class func_decl_node&) override;
-    void visit(const class struct_field_node&) override;
-    void visit(const class struct_type_node&) override;
-    void visit(const class method_decl_node&) override;
-    void visit(const class type_decl_node&) override;
-    void visit(const class interface_type_node&) override;
-    void visit(const class interface_method_node&) override;
-    void visit(const class member_call_node&) override;
-    void visit(const class member_access_node&) override;
-    void visit(const class qualified_call_node&) override;
-    void visit(const class call_node&) override;
-    void visit(const class index_node&) override;
-    void visit(const class compound_assign_node&) override;
-    void visit(const class if_stmt_node&) override;
-    void visit(const class tuple_expr_node&) override;
-    void visit(const class tuple_var_decl_node&) override;
-    void visit(const class tuple_assign_stmt_node&) override;
-    void visit(const class for_range_stmt_node&) override;
-    void visit(const class continue_stmt_node&) override;
-    void visit(const class break_stmt_node&) override;
-    void visit(const class init_list_expr_node&) override;
-    void visit(const class program_node&) override;
+    void visit(const identifier_node&) override;
+    void visit(const number_node&) override;
+    void visit(const string_node&) override;
+    void visit(const binary_op_node&) override;
+    void visit(const unary_op_node&) override;
+    void visit(const assign_node&) override;
+    void visit(const expr_stmt_node&) override;
+    void visit(const param_node&) override;
+    void visit(const var_decl_node&) override;
+    void visit(const return_stmt_node&) override;
+    void visit(const for_stmt_node&) override;
+    void visit(const compound_stmt_node&) override;
+    void visit(const func_decl_node&) override;
+    void visit(const struct_field_node&) override;
+    void visit(const struct_type_node&) override;
+    void visit(const method_decl_node&) override;
+    void visit(const type_decl_node&) override;
+    void visit(const interface_type_node&) override;
+    void visit(const interface_method_node&) override;
+    void visit(const member_call_node&) override;
+    void visit(const member_access_node&) override;
+    void visit(const qualified_call_node&) override;
+    void visit(const call_node&) override;
+    void visit(const index_node&) override;
+    void visit(const compound_assign_node&) override;
+    void visit(const if_stmt_node&) override;
+    void visit(const tuple_expr_node&) override;
+    void visit(const tuple_var_decl_node&) override;
+    void visit(const tuple_assign_stmt_node&) override;
+    void visit(const for_range_stmt_node&) override;
+    void visit(const continue_stmt_node&) override;
+    void visit(const break_stmt_node&) override;
+    void visit(const init_list_expr_node&) override;
+    void visit(const program_node&) override;
 
 private:
     symbol_table& symtab_;
     type_env& env_;
     diagnostics& diag_;
 
-    // Expression type side table
     std::unordered_map<const ast_node*, type_ptr> type_map_;
 
-    // Current function's return type (for return statement checking)
+    // Return type of the function body being checked, if any.
     type_ptr current_return_type_;
 
     void set_type(const ast_node& node, type_ptr t);
-    type_ptr infer_expr(const class expr_node& node);
+
+    // Visits `node` and returns its type, or a fresh variable if it has none.
+    type_ptr infer_expr(const expr_node& node);
+
+    // Unifies, downgrading failure to a warning on `node`.
     void try_unify(const ast_node& node, type_ptr a, type_ptr b, const std::string& context);
 
-    // Row-based member lookup helpers
-    type_ptr lookup_field(const ast_node& node, type_ptr obj_type, const std::string& field);
-    type_ptr lookup_method(const ast_node& node, type_ptr obj_type, const std::string& method);
+    // Infers the arguments against `callee` and returns the call's result type.
+    // `callee_name` only appears in diagnostics.
+    type_ptr infer_call(const ast_node& node, const type_ptr& callee,
+                        const std::vector<std::unique_ptr<expr_node>>& args,
+                        const std::string& callee_name);
+
+    // Return the member's type, or a fresh variable when it is not declared.
+    type_ptr lookup_field(type_ptr obj_type, const std::string& field);
+    type_ptr lookup_method(type_ptr obj_type, const std::string& method);
+
+    // Binds `ti`'s fields, inherited ones included, in the current scope.
+    void bind_fields(const type_info& ti);
+
+    // Checks a function or method body in a fresh scope holding its parameters.
+    // Pass the owning type in `fields` for a method, nullptr for a function.
+    void check_body(const fun_type_t& fun, const std::vector<std::unique_ptr<param_node>>& params,
+                    const stmt_node& body, const type_info* fields);
 };
 
 #endif  // TYPE_CHECKER_H

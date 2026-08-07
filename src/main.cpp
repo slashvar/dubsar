@@ -1,5 +1,4 @@
 #include <argparse/argparse.hpp>
-#include <filesystem>
 #include <format>
 #include <fstream>
 #include <iostream>
@@ -17,8 +16,7 @@
 
 extern int yyparse();
 
-// Flex buffer API. The concrete yy_buffer_state type is defined in the
-// generated lexer.cpp; only an opaque forward declaration is needed here.
+// Flex buffer API.  yy_buffer_state is defined in the generated lexer.cpp.
 struct yy_buffer_state;
 extern yy_buffer_state* yy_scan_string(
     const char*);  // NOLINT(cppcoreguidelines-owning-memory,readability-identifier-naming)
@@ -48,14 +46,11 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    auto input_file = program.get<std::string>("input-file");
-    auto no_check = program.get<bool>("--no-check");
+    const auto input_file = program.get<std::string>("input-file");
 
-    const std::filesystem::path input_path{input_file};
-
-    std::ifstream file{input_path};
+    std::ifstream file{input_file};
     if (!file) {
-        std::cerr << std::format("Error: Cannot open file '{}'\n", input_path.string());
+        std::cerr << std::format("Error: Cannot open file '{}'\n", input_file);
         return 1;
     }
 
@@ -67,31 +62,29 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    if (root) {
-        // Semantic passes (unless --no-check)
-        if (!no_check) {
-            diagnostics diag;
-            symbol_table symtab;
-            type_env env;
+    if (!program.get<bool>("--no-check")) {
+        diagnostics diag;
+        symbol_table symtab;
+        type_env env;
 
-            resolver res{symtab, env, diag};
-            res.resolve(*root);
+        resolver res{symtab, env, diag};
+        res.resolve(*root);
 
-            if (!diag.has_errors()) {
-                type_checker tc{symtab, env, diag};
-                root->accept(tc);
-            }
-
-            if (diag.has_errors()) {
-                diag.emit(std::cerr);
-                return 1;
-            }
+        // Inference on an unresolved program would report noise, not causes.
+        if (!diag.has_errors()) {
+            type_checker tc{symtab, env, diag};
+            root->accept(tc);
         }
 
-        printer p{std::cout};
-        root->accept(p);
-        std::cout << '\n';
+        diag.emit(std::cerr);
+        if (diag.has_errors()) {
+            return 1;
+        }
     }
+
+    printer p{std::cout};
+    root->accept(p);
+    std::cout << '\n';
 
     return 0;
 }
