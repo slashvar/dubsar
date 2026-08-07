@@ -1,10 +1,9 @@
-// %code requires is placed in both parser.cpp and the generated parser.hpp,
-// making these types available to any file that includes parser.hpp (e.g. the
-// lexer).
+// Emitted into both parser.cpp and the generated parser.hpp, so that every file
+// including parser.hpp (notably the lexer) can name the %union member types.
 %code requires {
 #include <string>
 #include <vector>
-#include "parser_types.h"
+#include "ast_fwd.h"
 }
 
 %{
@@ -21,16 +20,13 @@ extern int yylineno;
 extern char* yytext;
 void yyerror(const char* s);
 
-// Helper: set source location on a freshly-allocated AST node and return it.
+// Records the current source line on a freshly allocated node.
 template <typename T>
 T* loc(T* node) { node->line = yylineno; return node; }
 
-// NOTE: Bison's %union is a C union and cannot hold non-trivially-destructible
-// types such as std::unique_ptr. Raw owning pointers are therefore used inside
-// grammar semantic values. Ownership is transferred into AST node unique_ptr
-// members immediately at each construction site. String pointers are cleaned
-// up via local unique_ptr guards so that no explicit delete calls are needed.
-// %destructor rules handle cleanup of values discarded during error recovery.
+// Bison's %union is a C union, so semantic values are raw owning pointers: every
+// action moves them into an AST node or a local unique_ptr guard, and the
+// %destructor rules free whatever error recovery discards.
 %}
 
 %union {
@@ -57,11 +53,11 @@ T* loc(T* node) { node->line = yylineno; return node; }
 %type <node> expr stmt decl func_decl compound_stmt
 %type <node> for_stmt return_stmt var_decl
 %type <node> type_decl struct_type program method_decl
-%type <node> interface_type interface_method
+%type <node> interface_type interface_method param
 %type <node> if_stmt tuple_var_decl tuple_assign_stmt for_range_stmt continue_stmt break_stmt
 %type <node> tuple_expr tuple_rhs
 %type <paramvec> param_list_opt param_list
-%type <stringval> type_spec method_name base_type sized_int_type inner_type
+%type <stringval> type_spec method_name base_type sized_int_type inner_type ret_type_opt
 %type <nodevec> stmt_list_opt stmt_list field_list_opt field_list
 %type <nodevec> interface_method_list interface_method_list_opt
 %type <nodevec> arg_list_opt arg_list lvalue_list
@@ -73,7 +69,7 @@ T* loc(T* node) { node->line = yylineno; return node; }
 %left '+' '-'
 %left '*' '/' '%'
 %right '!' INC DEC
-%left '[' '.'
+%precedence '[' '.'
 
 %start program
 
@@ -91,34 +87,30 @@ program
         {
             root = std::make_unique<program_node>();
             root->line = yylineno;
-            auto list = std::unique_ptr<std::vector<ast_node*>>(
-                static_cast<std::vector<ast_node*>*>($1));
-            if (list) {
-                for (auto* n : *list) {
-                    root->add(static_cast<decl_node*>(n));
-                }
+            auto list = std::unique_ptr<std::vector<ast_node*>>($1);
+            for (auto* n : *list) {
+                root->add(static_cast<decl_node*>(n));
             }
-            // Ownership is held by the global 'root'; set $$ to nullptr so
-            // the <node> %destructor safely calls delete nullptr on cleanup.
+            // 'root' owns the tree now; the <node> %destructor deletes nullptr.
             $$ = nullptr;
         }
     ;
 
 stmt_list_opt
     : stmt_list
-    | /* empty */ { $$ = new std::vector<ast_node*>(); }
+    | %empty { $$ = new std::vector<ast_node*>(); }
     ;
 
 stmt_list
     : stmt
         {
             $$ = new std::vector<ast_node*>();
-            if ($1) $$->push_back($1);
+            $$->push_back($1);
         }
     | stmt_list stmt
         {
             $$ = $1;
-            if ($2) $$->push_back($2);
+            $$->push_back($2);
         }
     ;
 
@@ -134,11 +126,7 @@ stmt
     | break_stmt
     | tuple_assign_stmt
     | expr ';'
-        {
-            // Wrap in expr_stmt_node to give the expression a proper stmt_node
-            // type, avoiding an undefined expr_node* -> stmt_node* cast.
-            $$ = loc(new expr_stmt_node(static_cast<expr_node*>($1)));
-        }
+        { $$ = loc(new expr_stmt_node(static_cast<expr_node*>($1))); }
     | compound_stmt
     ;
 
@@ -146,28 +134,23 @@ decl
     : func_decl
     | type_decl
     | method_decl
-        { $$ = $1; }
+    ;
+
+// An empty ret_type_opt yields an empty string, which every consumer reads as
+// "no annotation".
+ret_type_opt
+    : %empty          { $$ = new std::string(); }
+    | ARROW type_spec { $$ = $2; }
     ;
 
 func_decl
-    : FUN IDENTIFIER '(' param_list_opt ')' compound_stmt
+    : FUN IDENTIFIER '(' param_list_opt ')' ret_type_opt compound_stmt
         {
             auto name = std::unique_ptr<std::string>($2);
+            auto ret  = std::unique_ptr<std::string>($6);
             auto* node = loc(new func_decl_node(
-                std::move(*name), std::string{}, static_cast<stmt_node*>($6)));
-            auto params = std::unique_ptr<std::vector<param_node*>>(
-                static_cast<std::vector<param_node*>*>($4));
-            for (auto* p : *params) node->params.emplace_back(p);
-            $$ = node;
-        }
-    | FUN IDENTIFIER '(' param_list_opt ')' ARROW type_spec compound_stmt
-        {
-            auto name    = std::unique_ptr<std::string>($2);
-            auto retType = std::unique_ptr<std::string>($7);
-            auto* node = loc(new func_decl_node(
-                std::move(*name), std::move(*retType), static_cast<stmt_node*>($8)));
-            auto params = std::unique_ptr<std::vector<param_node*>>(
-                static_cast<std::vector<param_node*>*>($4));
+                std::move(*name), std::move(*ret), static_cast<stmt_node*>($7)));
+            auto params = std::unique_ptr<std::vector<param_node*>>($4);
             for (auto* p : *params) node->params.emplace_back(p);
             $$ = node;
         }
@@ -192,24 +175,16 @@ struct_type
     : STRUCT '{' field_list_opt '}'
         {
             auto* node = loc(new struct_type_node("", ""));
-            auto list = std::unique_ptr<std::vector<ast_node*>>(
-                static_cast<std::vector<ast_node*>*>($3));
-            if (list) {
-                for (auto* n : *list)
-                    node->add_field(static_cast<struct_field_node*>(n));
-            }
+            auto list = std::unique_ptr<std::vector<ast_node*>>($3);
+            for (auto* n : *list) node->add_field(static_cast<struct_field_node*>(n));
             $$ = node;
         }
     | STRUCT ':' IDENTIFIER '{' field_list_opt '}'
         {
             auto parent = std::unique_ptr<std::string>($3);
             auto* node = loc(new struct_type_node("", std::move(*parent)));
-            auto list = std::unique_ptr<std::vector<ast_node*>>(
-                static_cast<std::vector<ast_node*>*>($5));
-            if (list) {
-                for (auto* n : *list)
-                    node->add_field(static_cast<struct_field_node*>(n));
-            }
+            auto list = std::unique_ptr<std::vector<ast_node*>>($5);
+            for (auto* n : *list) node->add_field(static_cast<struct_field_node*>(n));
             $$ = node;
         }
     ;
@@ -218,19 +193,15 @@ interface_type
     : INTERFACE '{' interface_method_list_opt '}'
         {
             auto* node = loc(new interface_type_node());
-            auto list = std::unique_ptr<std::vector<ast_node*>>(
-                static_cast<std::vector<ast_node*>*>($3));
-            if (list) {
-                for (auto* n : *list)
-                    node->add_method(static_cast<interface_method_node*>(n));
-            }
+            auto list = std::unique_ptr<std::vector<ast_node*>>($3);
+            for (auto* n : *list) node->add_method(static_cast<interface_method_node*>(n));
             $$ = node;
         }
     ;
 
 interface_method_list_opt
     : interface_method_list
-    | /* empty */ { $$ = new std::vector<ast_node*>(); }
+    | %empty { $$ = new std::vector<ast_node*>(); }
     ;
 
 interface_method_list
@@ -247,31 +218,18 @@ interface_method_list
     ;
 
 interface_method
-    : method_name '(' param_list_opt ')' ';'
+    : method_name '(' param_list_opt ')' ret_type_opt ';'
         {
             auto mname = std::unique_ptr<std::string>($1);
-            auto* node = loc(new interface_method_node(std::move(*mname), std::string{}));
-            auto params = std::unique_ptr<std::vector<param_node*>>(
-                static_cast<std::vector<param_node*>*>($3));
-            if (params) {
-                for (auto* p : *params) node->params.emplace_back(p);
-            }
-            $$ = node;
-        }
-    | method_name '(' param_list_opt ')' ARROW type_spec ';'
-        {
-            auto mname   = std::unique_ptr<std::string>($1);
-            auto retType = std::unique_ptr<std::string>($6);
-            auto* node = loc(new interface_method_node(std::move(*mname), std::move(*retType)));
-            auto params = std::unique_ptr<std::vector<param_node*>>(
-                static_cast<std::vector<param_node*>*>($3));
-            if (params) {
-                for (auto* p : *params) node->params.emplace_back(p);
-            }
+            auto ret   = std::unique_ptr<std::string>($5);
+            auto* node = loc(new interface_method_node(std::move(*mname), std::move(*ret)));
+            auto params = std::unique_ptr<std::vector<param_node*>>($3);
+            for (auto* p : *params) node->params.emplace_back(p);
             $$ = node;
         }
     ;
 
+// Base type keywords are valid method names, e.g. the `string()` of a stringer.
 method_name
     : IDENTIFIER { $$ = $1; }
     | base_type  { $$ = $1; }
@@ -279,51 +237,36 @@ method_name
 
 field_list_opt
     : field_list
-    | /* empty */ { $$ = new std::vector<ast_node*>(); }
+    | %empty { $$ = new std::vector<ast_node*>(); }
     ;
 
 field_list
     : IDENTIFIER ':' type_spec ';'
         {
-            auto fieldName = std::unique_ptr<std::string>($1);
-            auto fieldType = std::unique_ptr<std::string>($3);
+            auto name = std::unique_ptr<std::string>($1);
+            auto type = std::unique_ptr<std::string>($3);
             $$ = new std::vector<ast_node*>();
-            $$->push_back(loc(new struct_field_node(std::move(*fieldName),
-                                                std::move(*fieldType))));
+            $$->push_back(loc(new struct_field_node(std::move(*name), std::move(*type))));
         }
     | field_list IDENTIFIER ':' type_spec ';'
         {
-            auto fieldName = std::unique_ptr<std::string>($2);
-            auto fieldType = std::unique_ptr<std::string>($4);
+            auto name = std::unique_ptr<std::string>($2);
+            auto type = std::unique_ptr<std::string>($4);
             $$ = $1;
-            $$->push_back(loc(new struct_field_node(std::move(*fieldName),
-                                                std::move(*fieldType))));
+            $$->push_back(loc(new struct_field_node(std::move(*name), std::move(*type))));
         }
     ;
 
 method_decl
-    : FUN IDENTIFIER COLONCOLON IDENTIFIER '(' param_list_opt ')' compound_stmt
+    : FUN IDENTIFIER COLONCOLON IDENTIFIER '(' param_list_opt ')' ret_type_opt compound_stmt
         {
-            auto typeName   = std::unique_ptr<std::string>($2);
-            auto methodName = std::unique_ptr<std::string>($4);
+            auto type_name   = std::unique_ptr<std::string>($2);
+            auto method_name = std::unique_ptr<std::string>($4);
+            auto ret         = std::unique_ptr<std::string>($8);
             auto* node = loc(new method_decl_node(
-                std::move(*typeName), std::move(*methodName),
-                std::string{}, static_cast<stmt_node*>($8)));
-            auto params = std::unique_ptr<std::vector<param_node*>>(
-                static_cast<std::vector<param_node*>*>($6));
-            for (auto* p : *params) node->params.emplace_back(p);
-            $$ = node;
-        }
-    | FUN IDENTIFIER COLONCOLON IDENTIFIER '(' param_list_opt ')' ARROW type_spec compound_stmt
-        {
-            auto typeName   = std::unique_ptr<std::string>($2);
-            auto methodName = std::unique_ptr<std::string>($4);
-            auto retType    = std::unique_ptr<std::string>($9);
-            auto* node = loc(new method_decl_node(
-                std::move(*typeName), std::move(*methodName),
-                std::move(*retType), static_cast<stmt_node*>($10)));
-            auto params = std::unique_ptr<std::vector<param_node*>>(
-                static_cast<std::vector<param_node*>*>($6));
+                std::move(*type_name), std::move(*method_name),
+                std::move(*ret), static_cast<stmt_node*>($9)));
+            auto params = std::unique_ptr<std::vector<param_node*>>($6);
             for (auto* p : *params) node->params.emplace_back(p);
             $$ = node;
         }
@@ -331,89 +274,59 @@ method_decl
 
 param_list_opt
     : param_list
-    | /* empty */ { $$ = new std::vector<param_node*>(); }
+    | %empty { $$ = new std::vector<param_node*>(); }
     ;
 
 param_list
+    : param
+        {
+            $$ = new std::vector<param_node*>();
+            $$->push_back(static_cast<param_node*>($1));
+        }
+    | param_list ',' param
+        {
+            $$ = $1;
+            $$->push_back(static_cast<param_node*>($3));
+        }
+    ;
+
+// `ref` may precede or follow the type; both spell the same by-reference param.
+param
     : IDENTIFIER
         {
             auto name = std::unique_ptr<std::string>($1);
-            $$ = new std::vector<param_node*>();
-            $$->push_back(loc(new param_node(std::move(*name), "", false)));
+            $$ = loc(new param_node(std::move(*name), "", false));
         }
     | IDENTIFIER ':' REF
         {
             auto name = std::unique_ptr<std::string>($1);
-            $$ = new std::vector<param_node*>();
-            $$->push_back(loc(new param_node(std::move(*name), "", true)));
+            $$ = loc(new param_node(std::move(*name), "", true));
         }
     | IDENTIFIER ':' type_spec
         {
             auto name = std::unique_ptr<std::string>($1);
             auto type = std::unique_ptr<std::string>($3);
-            $$ = new std::vector<param_node*>();
-            $$->push_back(loc(new param_node(std::move(*name), std::move(*type), false)));
+            $$ = loc(new param_node(std::move(*name), std::move(*type), false));
         }
     | IDENTIFIER ':' type_spec REF
         {
             auto name = std::unique_ptr<std::string>($1);
             auto type = std::unique_ptr<std::string>($3);
-            $$ = new std::vector<param_node*>();
-            $$->push_back(loc(new param_node(std::move(*name), std::move(*type), true)));
+            $$ = loc(new param_node(std::move(*name), std::move(*type), true));
         }
     | IDENTIFIER ':' REF type_spec
         {
             auto name = std::unique_ptr<std::string>($1);
             auto type = std::unique_ptr<std::string>($4);
-            $$ = new std::vector<param_node*>();
-            $$->push_back(loc(new param_node(std::move(*name), std::move(*type), true)));
-        }
-    | param_list ',' IDENTIFIER
-        {
-            auto name = std::unique_ptr<std::string>($3);
-            $$ = $1;
-            $$->push_back(loc(new param_node(std::move(*name), "", false)));
-        }
-    | param_list ',' IDENTIFIER ':' REF
-        {
-            auto name = std::unique_ptr<std::string>($3);
-            $$ = $1;
-            $$->push_back(loc(new param_node(std::move(*name), "", true)));
-        }
-    | param_list ',' IDENTIFIER ':' type_spec
-        {
-            auto name = std::unique_ptr<std::string>($3);
-            auto type = std::unique_ptr<std::string>($5);
-            $$ = $1;
-            $$->push_back(loc(new param_node(std::move(*name), std::move(*type), false)));
-        }
-    | param_list ',' IDENTIFIER ':' type_spec REF
-        {
-            auto name = std::unique_ptr<std::string>($3);
-            auto type = std::unique_ptr<std::string>($5);
-            $$ = $1;
-            $$->push_back(loc(new param_node(std::move(*name), std::move(*type), true)));
-        }
-    | param_list ',' IDENTIFIER ':' REF type_spec
-        {
-            auto name = std::unique_ptr<std::string>($3);
-            auto type = std::unique_ptr<std::string>($6);
-            $$ = $1;
-            $$->push_back(loc(new param_node(std::move(*name), std::move(*type), true)));
+            $$ = loc(new param_node(std::move(*name), std::move(*type), true));
         }
     ;
 
 type_spec
-    : IDENTIFIER                            { $$ = $1; }
-    | base_type                             { $$ = $1; }
-    | sized_int_type                        { $$ = $1; }
+    : IDENTIFIER      { $$ = $1; }
+    | base_type       { $$ = $1; }
+    | sized_int_type  { $$ = $1; }
     | IDENTIFIER '<' inner_type '>'
-        {
-            auto outer = std::unique_ptr<std::string>($1);
-            auto inner = std::unique_ptr<std::string>($3);
-            $$ = new std::string(std::format("{}<{}>", *outer, *inner));
-        }
-    | IDENTIFIER '<' sized_int_type '>'
         {
             auto outer = std::unique_ptr<std::string>($1);
             auto inner = std::unique_ptr<std::string>($3);
@@ -439,8 +352,9 @@ sized_int_type
     ;
 
 inner_type
-    : IDENTIFIER    { $$ = $1; }
-    | base_type     { $$ = $1; }
+    : IDENTIFIER      { $$ = $1; }
+    | base_type       { $$ = $1; }
+    | sized_int_type  { $$ = $1; }
     ;
 
 var_decl
@@ -461,13 +375,10 @@ var_decl
         {
             auto name = std::unique_ptr<std::string>($2);
             auto type = std::unique_ptr<std::string>($4);
-            auto* node = loc(new init_list_expr_node());
-            auto args = std::unique_ptr<std::vector<ast_node*>>(
-                static_cast<std::vector<ast_node*>*>($7));
-            if (args) {
-                for (auto* a : *args) node->args.emplace_back(static_cast<expr_node*>(a));
-            }
-            $$ = loc(new var_decl_node(std::move(*name), std::move(*type), node));
+            auto* init = loc(new init_list_expr_node());
+            auto args = std::unique_ptr<std::vector<ast_node*>>($7);
+            for (auto* a : *args) init->args.emplace_back(static_cast<expr_node*>(a));
+            $$ = loc(new var_decl_node(std::move(*name), std::move(*type), init));
         }
     | VAR IDENTIFIER ':' type_spec ';'
         {
@@ -580,8 +491,7 @@ tuple_var_decl
         }
     ;
 
-// Accepts both a tuple expression and a plain expression on the RHS of a
-// tuple assignment, mirroring the same duality in return_stmt.
+// Mirrors return_stmt: the right-hand side may be a tuple or a single value.
 tuple_rhs
     : expr       { $$ = $1; }
     | tuple_expr { $$ = $1; }
@@ -590,8 +500,7 @@ tuple_rhs
 tuple_assign_stmt
     : lvalue_list '=' tuple_rhs ';'
         {
-            auto lhs_raw = std::unique_ptr<std::vector<ast_node*>>(
-                static_cast<std::vector<ast_node*>*>($1));
+            auto lhs_raw = std::unique_ptr<std::vector<ast_node*>>($1);
             std::vector<std::unique_ptr<expr_node>> lhs;
             for (auto* n : *lhs_raw) lhs.emplace_back(static_cast<expr_node*>(n));
             $$ = loc(new tuple_assign_stmt_node(std::move(lhs),
@@ -619,12 +528,8 @@ compound_stmt
     : '{' stmt_list_opt '}'
         {
             auto* node = loc(new compound_stmt_node());
-            auto list = std::unique_ptr<std::vector<ast_node*>>(
-                static_cast<std::vector<ast_node*>*>($2));
-            if (list) {
-                for (auto* n : *list)
-                    node->add(static_cast<stmt_node*>(n));
-            }
+            auto list = std::unique_ptr<std::vector<ast_node*>>($2);
+            for (auto* n : *list) node->add(static_cast<stmt_node*>(n));
             $$ = node;
         }
     ;
@@ -666,8 +571,18 @@ expr
         { $$ = loc(new binary_op_node("&&", static_cast<expr_node*>($1), static_cast<expr_node*>($3))); }
     | expr OR expr
         { $$ = loc(new binary_op_node("||", static_cast<expr_node*>($1), static_cast<expr_node*>($3))); }
+    | expr '%' expr
+        { $$ = loc(new binary_op_node("%", static_cast<expr_node*>($1), static_cast<expr_node*>($3))); }
     | expr '=' expr
         { $$ = loc(new assign_node(static_cast<expr_node*>($1), static_cast<expr_node*>($3))); }
+    | expr PLUS_EQ expr
+        { $$ = loc(new compound_assign_node("+=", static_cast<expr_node*>($1), static_cast<expr_node*>($3))); }
+    | expr MINUS_EQ expr
+        { $$ = loc(new compound_assign_node("-=", static_cast<expr_node*>($1), static_cast<expr_node*>($3))); }
+    | expr STAR_EQ expr
+        { $$ = loc(new compound_assign_node("*=", static_cast<expr_node*>($1), static_cast<expr_node*>($3))); }
+    | expr SLASH_EQ expr
+        { $$ = loc(new compound_assign_node("/=", static_cast<expr_node*>($1), static_cast<expr_node*>($3))); }
     | '!' expr
         { $$ = loc(new unary_op_node("!", static_cast<expr_node*>($2))); }
     | INC expr
@@ -680,27 +595,14 @@ expr
         { $$ = loc(new unary_op_node("post--", static_cast<expr_node*>($1))); }
     | '(' expr ')'
         { $$ = $2; }
-    | expr '%' expr
-        { $$ = loc(new binary_op_node("%", static_cast<expr_node*>($1), static_cast<expr_node*>($3))); }
     | expr '[' expr ']'
         { $$ = loc(new index_node(static_cast<expr_node*>($1), static_cast<expr_node*>($3))); }
-    | expr PLUS_EQ expr
-        { $$ = loc(new compound_assign_node("+=", static_cast<expr_node*>($1), static_cast<expr_node*>($3))); }
-    | expr MINUS_EQ expr
-        { $$ = loc(new compound_assign_node("-=", static_cast<expr_node*>($1), static_cast<expr_node*>($3))); }
-    | expr STAR_EQ expr
-        { $$ = loc(new compound_assign_node("*=", static_cast<expr_node*>($1), static_cast<expr_node*>($3))); }
-    | expr SLASH_EQ expr
-        { $$ = loc(new compound_assign_node("/=", static_cast<expr_node*>($1), static_cast<expr_node*>($3))); }
     | IDENTIFIER '(' arg_list_opt ')'
         {
             auto name = std::unique_ptr<std::string>($1);
             auto* node = loc(new call_node(std::move(*name)));
-            auto args = std::unique_ptr<std::vector<ast_node*>>(
-                static_cast<std::vector<ast_node*>*>($3));
-            if (args) {
-                for (auto* a : *args) node->args.emplace_back(static_cast<expr_node*>(a));
-            }
+            auto args = std::unique_ptr<std::vector<ast_node*>>($3);
+            for (auto* a : *args) node->args.emplace_back(static_cast<expr_node*>(a));
             $$ = node;
         }
     | expr '.' IDENTIFIER
@@ -714,11 +616,8 @@ expr
             auto mname = std::unique_ptr<std::string>($3);
             auto* node = loc(new member_call_node(
                 static_cast<expr_node*>($1), std::move(*mname)));
-            auto args = std::unique_ptr<std::vector<ast_node*>>(
-                static_cast<std::vector<ast_node*>*>($5));
-            if (args) {
-                for (auto* a : *args) node->args.emplace_back(static_cast<expr_node*>(a));
-            }
+            auto args = std::unique_ptr<std::vector<ast_node*>>($5);
+            for (auto* a : *args) node->args.emplace_back(static_cast<expr_node*>(a));
             $$ = node;
         }
     | IDENTIFIER COLONCOLON method_name '(' arg_list_opt ')'
@@ -726,18 +625,15 @@ expr
             auto qual  = std::unique_ptr<std::string>($1);
             auto mname = std::unique_ptr<std::string>($3);
             auto* node = loc(new qualified_call_node(std::move(*qual), std::move(*mname)));
-            auto args = std::unique_ptr<std::vector<ast_node*>>(
-                static_cast<std::vector<ast_node*>*>($5));
-            if (args) {
-                for (auto* a : *args) node->args.emplace_back(static_cast<expr_node*>(a));
-            }
+            auto args = std::unique_ptr<std::vector<ast_node*>>($5);
+            for (auto* a : *args) node->args.emplace_back(static_cast<expr_node*>(a));
             $$ = node;
         }
     ;
 
 arg_list_opt
     : arg_list
-    | /* empty */ { $$ = new std::vector<ast_node*>(); }
+    | %empty { $$ = new std::vector<ast_node*>(); }
     ;
 
 arg_list

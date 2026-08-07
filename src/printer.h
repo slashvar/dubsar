@@ -7,9 +7,8 @@
 
 #include "visitor.h"
 
-// Visitor that serialises an AST back to valid dubsar source code.
-// The output is stable under round-trip: parsing the output and running the
-// printer again produces identical text.
+// Serialises an AST back to dubsar source.  The output is round-trip stable:
+// parsing it and printing again yields identical text.
 class printer : public visitor {
 public:
     explicit printer(std::ostream& out) : out_(out) {}
@@ -53,12 +52,18 @@ private:
     std::ostream& out_;
     int indent_ = 0;
 
-    // Emit `indent_` spaces.
+    // Emits `indent_` spaces.
     void pad() const;
-    // Emit `indent_ + extra` spaces without changing indent_.
-    void pad(int extra) const;
-    // Emit a comma-separated parameter list (no surrounding parens).
-    void print_params(const std::vector<std::unique_ptr<param_node>>& params);
+
+    // Emits the nodes comma-separated, without any surrounding brackets.
+    template <typename Node>
+    void print_list(const std::vector<std::unique_ptr<Node>>& nodes) {
+        for (bool first = true; const auto& n : nodes) {
+            if (!first) out_ << ", ";
+            n->accept(*this);
+            first = false;
+        }
+    }
 };
 
 #endif  // PRINTER_H

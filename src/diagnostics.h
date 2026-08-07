@@ -16,7 +16,8 @@ public:
     void warning(const ast_node& node, std::string message);
     void warning(int line, std::string message);
     [[nodiscard]] bool has_errors() const noexcept;
-    [[nodiscard]] bool has_diagnostics() const noexcept;
+
+    // Writes every collected diagnostic, in the order reported.
     void emit(std::ostream& err) const;
 
 private:

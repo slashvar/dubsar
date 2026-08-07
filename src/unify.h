@@ -3,37 +3,38 @@
 
 #include <stdexcept>
 #include <string>
+#include <unordered_map>
 
 #include "types.h"
-
-// ── Type error ───────────────────────────────────────────────────────────────
 
 class type_error : public std::runtime_error {
 public:
     using std::runtime_error::runtime_error;
 };
 
-// ── Type environment (unification engine) ────────────────────────────────────
-
+// Hindley-Milner unification over the type IR, with Remy-style row unification
+// and levels for let-polymorphism.
 class type_env {
 public:
-    // Create a fresh type variable at the current level.
+    // A type variable at this level is universally quantified.
+    static constexpr int quantified_level = -1;
+
+    // Returns a fresh type variable at the current level.
     type_ptr fresh_var();
 
-    // Follow union-find chains to the representative type.
+    // Follows union-find bindings to the representative type.
     type_ptr find(type_ptr t) const;
 
-    // Unify two types.  Throws type_error on failure.
+    // Throws type_error when the two types cannot be made equal.
     void unify(type_ptr a, type_ptr b);
 
-    // Generalize: replace free type vars at level > `level` with quantified
-    // vars.  Returns a polymorphic type scheme.
+    // Quantifies the free variables of `t` above `level`, in place.
     type_ptr generalize(type_ptr t, int level);
 
-    // Instantiate: replace quantified vars with fresh type vars.
+    // Returns a copy of `scheme` with its quantified variables replaced by fresh
+    // ones, so each use site gets independent variables.
     type_ptr instantiate(type_ptr scheme);
 
-    // Scope level management for let-polymorphism.
     void enter_level() { ++current_level_; }
     void leave_level() { --current_level_; }
     [[nodiscard]] int current_level() const noexcept { return current_level_; }
@@ -43,7 +44,14 @@ private:
     int current_level_ = 0;
 
     bool occurs_in(int var_id, const type_ptr& t) const;
+    // Both arguments are resolved and share a kind, which is never type_var.
+    void unify_same_kind(const type_ptr& a, const type_ptr& b);
     void unify_rows(const type_ptr& a, const type_ptr& b);
+    // `mapping` keeps one fresh variable per quantified id across the recursion.
+    type_ptr instantiate_with(type_ptr t, std::unordered_map<int, type_ptr>& mapping);
 };
+
+// Parses `s` into a type, or returns a fresh variable when `s` is empty.
+type_ptr type_or_fresh(type_env& env, const std::string& s);
 
 #endif  // UNIFY_H

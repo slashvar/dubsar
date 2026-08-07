@@ -26,8 +26,6 @@ bool diagnostics::has_errors() const noexcept {
                                [](const diag_entry& e) { return e.sev == severity::error; });
 }
 
-bool diagnostics::has_diagnostics() const noexcept { return !entries_.empty(); }
-
 void diagnostics::emit(std::ostream& err) const {
     for (const auto& e : entries_) {
         const char* prefix = e.sev == severity::error ? "error" : "warning";
